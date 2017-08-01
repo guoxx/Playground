@@ -5,6 +5,8 @@
 *.ptx
 *.pyc
 
+Bin/*
+
 # Falcor related files
 Externals/Falcor/Test/Bin/*
 Externals/Falcor/Test/TestResults/*

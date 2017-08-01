@@ -1,0 +1,34 @@
+*.user
+*.sdf
+*.opensdf
+*.suo
+*.ptx
+*.pyc
+
+# Falcor related files
+Externals/Falcor/Test/Bin/*
+Externals/Falcor/Test/TestResults/*
+Externals/Falcor/Test/.vs/*
+Externals/Falcor/Bin/*
+Externals/Falcor/Falcor.VC.db
+Externals/Falcor/FalcorTest.VC.db
+Externals/Falcor/FalcorTest/TestResults/*
+Externals/Falcor/Falcor.VC.VC.opendb
+Externals/Falcor/Framework/Externals/NVAPI/
+Externals/Falcor/.vs/*
+Externals/Falcor/Test/OutputTestingHtml.pyc
+Externals/Falcor/Test/TestingUtil.pyc
+Externals/Falcor/Test/RunAllTests.pyc
+
+# A bit of a song and dance to ignore all the files
+# in the Slang codebase except for the ones we need.
+Externals/Falcor/Framework/Externals/slang/*
+!Externals/Falcor/Framework/Externals/slang/source/
+Externals/Falcor/Framework/Externals/slang/source/**/*.vcxproj
+Externals/Falcor/Framework/Externals/slang/source/**/*.filters
+Externals/Falcor/Framework/Externals/slang/source/**/*.natvis
+!Externals/Falcor/Framework/Externals/slang/source/**/*.cpp
+!Externals/Falcor/Framework/Externals/slang/source/**/*.cpp
+!Externals/Falcor/Framework/Externals/slang/source/**/*.h
+Externals/Falcor/Framework/Externals/
+Externals/Falcor/Media/

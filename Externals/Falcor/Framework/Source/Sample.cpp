@@ -37,6 +37,7 @@
 #include "Utils\ProgressBar.h"
 #include <sstream>
 #include <iomanip>
+#include "RenderDoc.h"
 
 namespace Falcor
 {
@@ -161,6 +162,13 @@ namespace Falcor
 
     void Sample::run(const SampleConfig& config)
     {
+        // @@GXX
+        mArgList.parseCommandLine(GetCommandLineA());
+        if (mArgList.argExists("renderdoc"))
+        {
+            RenderDoc::initialize(mArgList.argExists("debuggfx"));
+        }
+
         mTimeScale = config.timeScale;
         mFreezeTime = config.freezeTimeOnStartup;
 
@@ -216,8 +224,6 @@ namespace Falcor
         // Init the UI
         initUI();
 
-        // Load and run
-        mArgList.parseCommandLine(GetCommandLineA());
         mpPixelZoom = PixelZoom::create(mpDefaultFBO.get());
 
         onLoad();

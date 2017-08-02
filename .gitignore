@@ -5,6 +5,8 @@
 *.ptx
 *.pyc
 
+Playground.VC.VC.opendb
+
 Bin/*
 
 # Falcor related files

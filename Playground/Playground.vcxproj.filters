@@ -6,4 +6,14 @@
   <ItemGroup>
     <ClInclude Include="ModelViewer.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Data">
+      <UniqueIdentifier>{9ebcbc81-bc48-4077-9ddb-bafc37989163}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Data\ModelViewer.ps.slang">
+      <Filter>Data</Filter>
+    </None>
+  </ItemGroup>
 </Project>

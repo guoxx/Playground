@@ -258,6 +258,10 @@ namespace Falcor
         */
         Texture::SharedPtr getAmbientOcclusionMap() const { return mData.textures.ambientMap; }
 
+        // @@guoxx
+        void setRoughnessMap(const Texture::SharedPtr& pRoughnessMap);
+        Texture::SharedPtr getRoughnessMap() const { return mData.textures.roughnessMap; }
+
         /** Set the height map value
         */
         void setHeightMap(const Texture::SharedPtr& pHeightMap);
@@ -315,7 +319,9 @@ namespace Falcor
         void normalize() const;
         void updateTextureCount() const;
 
-        static const uint32_t kTexCount = MatMaxLayers + 4;
+        // @@guoxx
+        static const uint32_t kTexCount = MatMaxLayers + 5;
+        //static const uint32_t kTexCount = MatMaxLayers + 4;
         static_assert(sizeof(MaterialTextures) == (sizeof(Texture::SharedPtr) * kTexCount), "Wrong number of textures in Material::mTextures");
 
         Material(const std::string& name);

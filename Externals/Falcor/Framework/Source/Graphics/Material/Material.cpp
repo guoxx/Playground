@@ -399,6 +399,14 @@ namespace Falcor
         mDescDirty = true;
     }
 
+    // @@guoxx
+    void Material::setRoughnessMap(const Texture::SharedPtr& pRoughnessMap)
+    {
+        mData.textures.roughnessMap = pRoughnessMap;
+        mData.desc.hasRoughnessMap = (pRoughnessMap != nullptr);
+        mDescDirty = true;
+    };
+
     void Material::setHeightMap(const Texture::SharedPtr& pHeightMap)
     { 
         mData.textures.heightMap = pHeightMap;
@@ -530,7 +538,19 @@ namespace Falcor
             }
         }
         mDescString += "},";
+#if 1
+        // @@guoxx
+        mDescString += std::to_string(mData.desc.hasAlphaMap)
+                    + ',' + std::to_string(mData.desc.hasNormalMap)
+                    + ',' + std::to_string(mData.desc.hasHeightMap)
+                    + ',' + std::to_string(mData.desc.hasAmbientMap)
+                    + ',' + std::to_string(mData.desc.hasRoughnessMap)
+                    + ',' + std::to_string(mData.desc.dummy0)
+                    + ',' + std::to_string(mData.desc.dummy1)
+                    + ',' + std::to_string(mData.desc.dummy2);
+#else
         mDescString += std::to_string(mData.desc.hasAlphaMap) + ',' + std::to_string(mData.desc.hasNormalMap) + ',' + std::to_string(mData.desc.hasHeightMap) + ',' + std::to_string(mData.desc.hasAmbientMap);
+#endif
 
         mDescString += ",{";
         for (uint32_t layerType = 0; layerType < MatNumTypes; layerType++)

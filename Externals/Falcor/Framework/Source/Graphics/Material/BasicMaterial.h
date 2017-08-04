@@ -50,6 +50,9 @@ namespace Falcor
             HeightMap,      ///< Height/displacement map
             AmbientMap,     ///< Ambient occlusion map
 
+            // @@guoxx
+            RoughnessMap,   ///< Roughness map
+
             Count
         };
 

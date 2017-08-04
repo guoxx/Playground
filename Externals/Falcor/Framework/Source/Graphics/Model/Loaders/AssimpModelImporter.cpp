@@ -218,6 +218,8 @@ namespace Falcor
         case aiTextureType_EMISSIVE:
             return BasicMaterial::MapType::EmissiveMap;
         case aiTextureType_HEIGHT:
+            // @@guoxx
+            return BasicMaterial::MapType::NormalMap;
             // OBJ doesn't support normal maps, so they are usually placed in the height map slot. For consistency with other formats, we move them to the normal map slot.
             return isObjFile ? BasicMaterial::MapType::NormalMap : BasicMaterial::MapType::HeightMap;
         case aiTextureType_NORMALS:
@@ -226,6 +228,9 @@ namespace Falcor
             return BasicMaterial::MapType::AlphaMap;
         case aiTextureType_AMBIENT:
             return BasicMaterial::MapType::AmbientMap;
+        // @@guoxx
+        case aiTextureType_SHININESS:
+            return BasicMaterial::MapType::RoughnessMap;
         default:
             return BasicMaterial::MapType::Count;
         }

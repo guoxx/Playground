@@ -172,6 +172,13 @@ struct MaterialDesc
     uint32_t            hasNormalMap    DEFAULTS(0);
     uint32_t            hasHeightMap    DEFAULTS(0);
     uint32_t            hasAmbientMap   DEFAULTS(0);
+
+    // @@guoxx
+    uint32_t            hasRoughnessMap DEFAULTS(0);
+    uint32_t            dummy0          DEFAULTS(0);
+    uint32_t            dummy1          DEFAULTS(0);
+    uint32_t            dummy2          DEFAULTS(0);
+
     LayerIdxByType      layerIdByType[MatNumTypes];             ///< Provides a layer idx by its type, if there is no layer of this type, the idx is -1
 };
 
@@ -190,6 +197,9 @@ struct MaterialTextures
     Texture2D normalMap;        // Normal map modifier, if texture is non-null, shading normal is perturbed
     Texture2D heightMap;        // Height (displacement) map modifier, if texture is non-null, one can apply a displacement or parallax mapping
     Texture2D ambientMap;       // Ambient occlusion map
+
+    // @@guoxx
+    Texture2D roughnessMap;     // Roughness map
 };
 
 struct MaterialData

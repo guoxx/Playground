@@ -123,6 +123,8 @@ namespace Falcor
         pMaterial->setAmbientOcclusionMap(pTextures[MapType::AmbientMap]);
         pMaterial->setHeightModifiers(glm::vec2(bumpScale, bumpOffset));
         pMaterial->setHeightMap(pTextures[MapType::HeightMap]);
+        // @@guoxx
+        pMaterial->setRoughnessMap(pTextures[MapType::RoughnessMap]);
 
         return pMaterial;
     }
@@ -207,6 +209,8 @@ namespace Falcor
         pTextures[MapType::AmbientMap] = pMaterial->getAmbientOcclusionMap();
         pTextures[MapType::NormalMap] = pMaterial->getNormalMap();
         pTextures[MapType::HeightMap] = pMaterial->getHeightMap();
+        // @@guoxx
+        pTextures[MapType::RoughnessMap] = pMaterial->getRoughnessMap();
         bumpScale = pMaterial->getHeightModifiers().x;
         bumpOffset = pMaterial->getHeightModifiers().y;
     }

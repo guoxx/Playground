@@ -45,8 +45,9 @@ float4 main(VS_OUT vOut) : SV_TARGET
     }
     else
     {
+		float lodBias = 0;
         ShadingAttribs shAttr;
-        prepareShadingAttribs(gMaterial, vOut.posW, gCam.position, vOut.normalW, vOut.bitangentW, vOut.texC, shAttr);
+        prepareShadingAttribsMetallic(gMaterial, vOut.posW, gCam.position, vOut.normalW, vOut.bitangentW, vOut.texC, lodBias, shAttr);
 
         ShadingOutput result;
 

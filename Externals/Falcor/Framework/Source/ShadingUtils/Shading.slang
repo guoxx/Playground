@@ -112,6 +112,67 @@ __import BSDFs;
 Material shading building blocks
 *******************************************************************/
 
+// @@guoxx
+void _fn prepareShadingAttribsMetallic(MaterialData material, in float3 P, in float3 camPos,
+    in float3 normal, in float3 bitangent, in float2 uv,
+#ifdef _MS_USER_DERIVATIVES
+    float2 dPdx, float2 dPdy,
+#else
+    float lodBias,
+#endif
+    _ref(ShadingAttribs) shAttr)
+{
+    /* Prepare shading attributes */
+    shAttr.P = P;
+    shAttr.E = normalize(camPos - P);
+    shAttr.N = normalize(normal);
+    shAttr.B = normalize(bitangent - shAttr.N * (dot(bitangent, shAttr.N)));
+    shAttr.T = normalize(cross(shAttr.B, shAttr.N));
+    shAttr.UV = uv;
+#ifdef _MS_USER_DERIVATIVES
+    shAttr.DPDX = dPdx;
+    shAttr.DPDY = dPdy;
+#else
+    shAttr.lodBias = lodBias;
+#endif
+
+
+    /* Copy the input material parameters */
+#ifdef _MS_STATIC_MATERIAL_DESC
+    MaterialDesc desc = _MS_STATIC_MATERIAL_DESC;
+#else
+    MaterialDesc desc = material.desc;
+#endif
+
+    shAttr.preparedMat.values = material.values;
+    shAttr.preparedMat.desc = desc;
+
+    /* Evaluate alpha test material modifier */
+    applyAlphaTest(material, shAttr, P);
+    shAttr.aoFactor = 1;
+
+    float3 albedo = sampleTexture(material.textures.layers[0], material.samplerState, shAttr).xyz;
+    float metallic = sampleTexture(material.textures.ambientMap, material.samplerState, shAttr).x;
+	float3 diffuse = lerp(albedo, 0.0f, metallic);
+	float3 specular = lerp(0.03f, albedo, metallic);
+	float roughness = 0.25f;
+	if (desc.hasRoughnessMap)
+	{
+		roughness = sampleTexture(material.textures.roughnessMap, material.samplerState, shAttr).x;
+	}
+
+	initDiffuseLayer(shAttr.preparedMat.desc.layers[0], shAttr.preparedMat.values.layers[0], diffuse);
+
+	float IoR = 3.f;
+	float kappa = 4.2f;
+	initConductorLayer(shAttr.preparedMat.desc.layers[1], shAttr.preparedMat.values.layers[1], specular, roughness, IoR, kappa);
+
+	initNullLayer(shAttr.preparedMat.desc.layers[2]);
+
+    /* Perturb shading normal is needed */
+    perturbNormal(material, shAttr);
+}
+
 /**
 Prepares all light-independent attributes needed to perform shading at a hit point.
 This includes fetching all textures and computing final shading attributes, like albedo and roughness.

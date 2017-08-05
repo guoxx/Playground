@@ -43,6 +43,92 @@ namespace Falcor
     { (uint32_t)ToneMapping::Operator::Aces, "ACES" }
     };
 
+    // @@guoxx
+    const Gui::DropdownList kExposureModeList = {
+        { (uint32_t)ExposureMode_Manual_SBS, "Saturation-based Speed" },
+        { (uint32_t)ExposureMode_Manual_SOS, "Standard output sensitivity" },
+        { (uint32_t)ExposureMode_Automatic, "Automatic" },
+        { (uint32_t)ExposureMode_Falcor, "Falcor default" },
+    };
+
+    const Gui::DropdownList kShutterSpeedList = {
+        { (uint32_t)ToneMapping::ShutterSpeed::ShutterSpeed1Over1, "1s" },
+        { (uint32_t)ToneMapping::ShutterSpeed::ShutterSpeed1Over2, "1/2s" },
+        { (uint32_t)ToneMapping::ShutterSpeed::ShutterSpeed1Over4, "1/4s" },
+        { (uint32_t)ToneMapping::ShutterSpeed::ShutterSpeed1Over8, "1/8s" },
+        { (uint32_t)ToneMapping::ShutterSpeed::ShutterSpeed1Over15, "1/15s" },
+        { (uint32_t)ToneMapping::ShutterSpeed::ShutterSpeed1Over30, "1/30s" },
+        { (uint32_t)ToneMapping::ShutterSpeed::ShutterSpeed1Over60, "1/60s" },
+        { (uint32_t)ToneMapping::ShutterSpeed::ShutterSpeed1Over125, "1/125s" },
+        { (uint32_t)ToneMapping::ShutterSpeed::ShutterSpeed1Over250, "1/250s" },
+        { (uint32_t)ToneMapping::ShutterSpeed::ShutterSpeed1Over500, "1/500s" },
+        { (uint32_t)ToneMapping::ShutterSpeed::ShutterSpeed1Over1000, "1/1000s" },
+        { (uint32_t)ToneMapping::ShutterSpeed::ShutterSpeed1Over2000, "1/2000s" },
+        { (uint32_t)ToneMapping::ShutterSpeed::ShutterSpeed1Over4000, "1/4000s" },
+    };
+
+    const Gui::DropdownList kFStopList = {
+        { (uint32_t)ToneMapping::FStop::FStop1Point8, "f/1.8" },
+        { (uint32_t)ToneMapping::FStop::FStop2Point0, "f/2.0" },
+        { (uint32_t)ToneMapping::FStop::FStop2Point2, "f/2.2" },
+        { (uint32_t)ToneMapping::FStop::FStop2Point5, "f/2.5" },
+        { (uint32_t)ToneMapping::FStop::FStop2Point8, "f/2.8" },
+        { (uint32_t)ToneMapping::FStop::FStop3Point2, "f/3.2" },
+        { (uint32_t)ToneMapping::FStop::FStop3Point5, "f/3.5" },
+        { (uint32_t)ToneMapping::FStop::FStop4Point0, "f/4.0" },
+        { (uint32_t)ToneMapping::FStop::FStop4Point5, "f/4.5" },
+        { (uint32_t)ToneMapping::FStop::FStop5Point0, "f/5.0" },
+        { (uint32_t)ToneMapping::FStop::FStop5Point6, "f/5.6" },
+        { (uint32_t)ToneMapping::FStop::FStop6Point3, "f/6.3" },
+        { (uint32_t)ToneMapping::FStop::FStop7Point1, "f/7.1" },
+        { (uint32_t)ToneMapping::FStop::FStop8Point0, "f/8.0" },
+        { (uint32_t)ToneMapping::FStop::FStop9Point0, "f/9.0" },
+        { (uint32_t)ToneMapping::FStop::FStop10Point0, "f/10.0" },
+        { (uint32_t)ToneMapping::FStop::FStop11Point0, "f/11.0" },
+        { (uint32_t)ToneMapping::FStop::FStop13Point0, "f/13.0" },
+        { (uint32_t)ToneMapping::FStop::FStop14Point0, "f/14.0" },
+        { (uint32_t)ToneMapping::FStop::FStop16Point0, "f/16.0" },
+        { (uint32_t)ToneMapping::FStop::FStop18Point0, "f/18.0" },
+        { (uint32_t)ToneMapping::FStop::FStop20Point0, "f/20.0" },
+        { (uint32_t)ToneMapping::FStop::FStop22Point0, "f/22.0" },
+    };
+
+    const Gui::DropdownList kISORatingList = {
+        { (uint32_t)ToneMapping::ISORating::ISO100, "ISO100" },
+        { (uint32_t)ToneMapping::ISORating::ISO200, "ISO200" },
+        { (uint32_t)ToneMapping::ISORating::ISO400, "ISO400" },
+        { (uint32_t)ToneMapping::ISORating::ISO800, "ISO800" },
+    };
+
+    inline float getApertureFNumber(int32_t v)
+    {
+        static const float FNumbers[] =
+        {
+            1.8f, 2.0f, 2.2f, 2.5f, 2.8f, 3.2f, 3.5f, 4.0f, 4.5f, 5.0f, 5.6f, 6.3f, 7.1f, 8.0f,
+            9.0f, 10.0f, 11.0f, 13.0f, 14.0f, 16.0f, 18.0f, 20.0f, 22.0f
+        };
+        return FNumbers[int(v)];
+    }
+
+    inline float getShutterSpeedValue(int32_t v)
+    {
+        static const float ShutterSpeedValues[] =
+        {
+            1.0f / 1.0f, 1.0f / 2.0f, 1.0f / 4.0f, 1.0f / 8.0f, 1.0f / 15.0f, 1.0f / 30.0f,
+            1.0f / 60.0f, 1.0f / 125.0f, 1.0f / 250.0f, 1.0f / 500.0f, 1.0f / 1000.0f, 1.0f / 2000.0f, 1.0f / 4000.0f,
+        };
+        return ShutterSpeedValues[int(v)];
+    }
+
+    inline float getISORatingValue(int32_t v)
+    {
+        static const float ISOValues[] =
+        {
+            100.0f, 200.0f, 400.0f, 800.0f
+        };
+        return ISOValues[int(v)];
+    }
+
     ToneMapping::~ToneMapping() = default;
 
     ToneMapping::ToneMapping(ToneMapping::Operator op)
@@ -55,6 +141,16 @@ namespace Falcor
         mpPointSampler = Sampler::create(samplerDesc);
         samplerDesc.setFilterMode(Sampler::Filter::Linear, Sampler::Filter::Linear, Sampler::Filter::Point);
         mpLinearSampler = Sampler::create(samplerDesc);
+
+        // @@guoxx
+        mExposureMode = ExposureMode_Manual_SOS;
+        mShutterSpeed = ShutterSpeed::ShutterSpeed1Over30;
+        mAperture = FStop::FStop20Point0;
+        mISO = ISORating::ISO100;
+        mConstBufferData.camSettings.exposureMode = mExposureMode;
+        mConstBufferData.camSettings.shutterSpeed = getShutterSpeedValue(int32_t(mShutterSpeed));
+        mConstBufferData.camSettings.aperture = getApertureFNumber(int32_t(mAperture));
+        mConstBufferData.camSettings.ISO = getISORatingValue(int32_t(mISO));
     }
 
     ToneMapping::UniquePtr ToneMapping::create(Operator op)
@@ -191,6 +287,38 @@ namespace Falcor
             else if (mOperator == Operator::HableUc2)
             {
                 pGui->addFloatVar("Linear White", mConstBufferData.whiteScale, 0, 100, 0.01f);
+            }
+
+            // @@guoxx
+            if (pGui->beginGroup("Camera Settings"))
+            {
+                if (pGui->addDropdown("Expsure Mode", kExposureModeList, mExposureMode))
+                {
+                    mConstBufferData.camSettings.exposureMode = mExposureMode;
+                }
+
+                uint32_t shutterSpeedIndex = static_cast<uint32_t>(mShutterSpeed);
+                if (pGui->addDropdown("Shutter Speed", kShutterSpeedList, shutterSpeedIndex))
+                {
+                    mConstBufferData.camSettings.shutterSpeed = getShutterSpeedValue(shutterSpeedIndex);
+                    mShutterSpeed = static_cast<ShutterSpeed>(shutterSpeedIndex);
+                }
+
+                uint32_t apertureIndex = static_cast<uint32_t>(mAperture);
+                if (pGui->addDropdown("Aperture", kFStopList, apertureIndex))
+                {
+                    mConstBufferData.camSettings.aperture = getApertureFNumber(apertureIndex);
+                    mAperture = static_cast<FStop>(apertureIndex);
+                }
+
+                uint32_t ISOIndex = static_cast<uint32_t>(mISO);
+                if (pGui->addDropdown("ISO", kISORatingList, ISOIndex))
+                {
+                    mConstBufferData.camSettings.ISO = getISORatingValue(ISOIndex);
+                    mISO = static_cast<ISORating>(ISOIndex);
+                }
+
+                pGui->endGroup();
             }
 
             if (uiGroup) pGui->endGroup();

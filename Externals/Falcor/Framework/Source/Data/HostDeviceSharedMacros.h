@@ -159,4 +159,10 @@
 
 #define ROUGHNESS_CHANNEL_BIT 2
 
+// @@guoxx
+#define ExposureMode_Manual_SBS 0
+#define ExposureMode_Manual_SOS 1
+#define ExposureMode_Automatic  2
+#define ExposureMode_Falcor     3
+
 #endif //_HOST_DEVICE_SHARED_MACROS_H

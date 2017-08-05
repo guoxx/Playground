@@ -2263,5 +2263,8 @@
     <None Include="Data\Framework\Shaders\TextRenderer.ps.slang">
       <Filter>Data\Framework\Shaders</Filter>
     </None>
+    <None Include="Data\Effects\Exposure.slang">
+      <Filter>Data\Effects</Filter>
+    </None>
   </ItemGroup>
 </Project>

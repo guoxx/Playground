@@ -465,6 +465,15 @@ struct DispatchArguments
     uint threadGroupCountZ;
 };
 
+// @@guoxx
+struct CameraSettings
+{
+    int exposureMode;
+    float aperture;
+    float shutterSpeed;
+    float ISO;
+};
+
 #ifdef HOST_CODE
 static_assert((sizeof(MaterialValues) % sizeof(float4)) == 0, "MaterialValue has a wrong size");
 static_assert((sizeof(MaterialLayerDesc) % sizeof(float4)) == 0, "MaterialLayerDesc has a wrong size");
@@ -472,6 +481,7 @@ static_assert((sizeof(MaterialLayerValues) % sizeof(float4)) == 0, "MaterialLaye
 static_assert((sizeof(MaterialDesc) % sizeof(float4)) == 0, "MaterialDesc has a wrong size");
 static_assert((sizeof(MaterialValues) % sizeof(float4)) == 0, "MaterialValues has a wrong size");
 static_assert((sizeof(MaterialData) % sizeof(float4)) == 0, "MaterialData has a wrong size");
+static_assert((sizeof(CameraSettings) % sizeof(float4)) == 0, "MaterialData has a wrong size");
 #undef SamplerState
 #undef Texture2D
 } // namespace Falcor

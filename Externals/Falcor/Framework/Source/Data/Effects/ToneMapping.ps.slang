@@ -26,6 +26,10 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
 
+#include "HostDeviceData.h"
+
+__import Exposure;
+
 SamplerState gLuminanceTexSampler : register(s0);
 SamplerState gColorSampler : register(s1);
 
@@ -38,6 +42,8 @@ cbuffer PerImageCB : register(b0)
     float gMaxWhiteLuminance;
     float gLuminanceLod;
     float gWhiteScale;
+
+	CameraSettings gCamSettings;
 };
 
 float calcLuminance(float3 color)
@@ -50,8 +56,18 @@ float3 calcExposedColor(float3 color, float2 texC)
     float pixelLuminance = calcLuminance(color);
     float avgLuminance = gLuminanceTex.SampleLevel(gLuminanceTexSampler, texC, gLuminanceLod).r;
     avgLuminance = exp2(avgLuminance);
-    float exposedLuminance = (gExposureKey / avgLuminance);
-    return exposedLuminance*color;
+
+	float3 exposedLuminance;
+	if (gCamSettings.exposureMode == ExposureMode_Falcor)
+	{
+		exposedLuminance = (gExposureKey / avgLuminance)*color;
+	}
+	else
+	{
+		float exposure;
+		exposedLuminance = getExposedColor(gCamSettings, color, avgLuminance, 0, exposure);
+	}
+    return exposedLuminance;
 }
 
 float3 linearToneMap(float3 color)

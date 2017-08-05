@@ -79,12 +79,23 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="FeatureDemo.cpp" />
+    <ClCompile Include="FeatureDemoControls.cpp" />
+    <ClCompile Include="FeatureDemoSceneRenderer.cpp" />
     <ClCompile Include="ModelViewer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="FeatureDemo.h" />
+    <ClInclude Include="FeatureDemoSceneRenderer.h" />
     <ClInclude Include="ModelViewer.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Data\ApplyAO.ps.slang" />
+    <None Include="Data\DepthPass.ps.slang" />
+    <None Include="Data\DepthPass.vs.slang" />
+    <None Include="Data\FeatureDemo.ps.slang" />
+    <None Include="Data\FeatureDemo.vs.slang" />
+    <None Include="Data\FeatureDemoCommon.hlsli" />
     <None Include="Data\ModelViewer.ps.slang" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

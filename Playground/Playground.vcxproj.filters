@@ -2,9 +2,14 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="ModelViewer.cpp" />
+    <ClCompile Include="FeatureDemo.cpp" />
+    <ClCompile Include="FeatureDemoControls.cpp" />
+    <ClCompile Include="FeatureDemoSceneRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ModelViewer.h" />
+    <ClInclude Include="FeatureDemo.h" />
+    <ClInclude Include="FeatureDemoSceneRenderer.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Data">
@@ -13,6 +18,24 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Data\ModelViewer.ps.slang">
+      <Filter>Data</Filter>
+    </None>
+    <None Include="Data\ApplyAO.ps.slang">
+      <Filter>Data</Filter>
+    </None>
+    <None Include="Data\DepthPass.ps.slang">
+      <Filter>Data</Filter>
+    </None>
+    <None Include="Data\DepthPass.vs.slang">
+      <Filter>Data</Filter>
+    </None>
+    <None Include="Data\FeatureDemo.ps.slang">
+      <Filter>Data</Filter>
+    </None>
+    <None Include="Data\FeatureDemo.vs.slang">
+      <Filter>Data</Filter>
+    </None>
+    <None Include="Data\FeatureDemoCommon.hlsli">
       <Filter>Data</Filter>
     </None>
   </ItemGroup>

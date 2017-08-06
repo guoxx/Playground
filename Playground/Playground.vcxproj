@@ -82,12 +82,23 @@
     <ClCompile Include="FeatureDemo.cpp" />
     <ClCompile Include="FeatureDemoControls.cpp" />
     <ClCompile Include="FeatureDemoSceneRenderer.cpp" />
+    <ClCompile Include="Graphics\HosekWilkie_SkylightModel\ArHosekSkyModel.cpp" />
+    <ClCompile Include="Graphics\SunLight.cpp" />
     <ClCompile Include="ModelViewer.cpp" />
+    <ClCompile Include="Utils\Spectrum.cpp" />
+    <ClCompile Include="Utils\SphericalCoordinates.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FeatureDemo.h" />
     <ClInclude Include="FeatureDemoSceneRenderer.h" />
+    <ClInclude Include="Graphics\HosekWilkie_SkylightModel\ArHosekSkyModel.h" />
+    <ClInclude Include="Graphics\HosekWilkie_SkylightModel\ArHosekSkyModelData_CIEXYZ.h" />
+    <ClInclude Include="Graphics\HosekWilkie_SkylightModel\ArHosekSkyModelData_RGB.h" />
+    <ClInclude Include="Graphics\HosekWilkie_SkylightModel\ArHosekSkyModelData_Spectral.h" />
+    <ClInclude Include="Graphics\SunLight.h" />
     <ClInclude Include="ModelViewer.h" />
+    <ClInclude Include="Utils\Spectrum.h" />
+    <ClInclude Include="Utils\SphericalCoordinates.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Data\ApplyAO.ps.slang" />
@@ -97,6 +108,9 @@
     <None Include="Data\FeatureDemo.vs.slang" />
     <None Include="Data\FeatureDemoCommon.hlsli" />
     <None Include="Data\ModelViewer.ps.slang" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="Graphics\HosekWilkie_SkylightModel\README.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -5,15 +5,57 @@
     <ClCompile Include="FeatureDemo.cpp" />
     <ClCompile Include="FeatureDemoControls.cpp" />
     <ClCompile Include="FeatureDemoSceneRenderer.cpp" />
+    <ClCompile Include="Graphics\SunLight.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\SphericalCoordinates.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\Spectrum.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\HosekWilkie_SkylightModel\ArHosekSkyModel.cpp">
+      <Filter>Graphics\HosekWilkie_SkylightModel</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ModelViewer.h" />
     <ClInclude Include="FeatureDemo.h" />
     <ClInclude Include="FeatureDemoSceneRenderer.h" />
+    <ClInclude Include="Graphics\SunLight.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\SphericalCoordinates.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\Spectrum.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\HosekWilkie_SkylightModel\ArHosekSkyModel.h">
+      <Filter>Graphics\HosekWilkie_SkylightModel</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\HosekWilkie_SkylightModel\ArHosekSkyModelData_CIEXYZ.h">
+      <Filter>Graphics\HosekWilkie_SkylightModel</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\HosekWilkie_SkylightModel\ArHosekSkyModelData_RGB.h">
+      <Filter>Graphics\HosekWilkie_SkylightModel</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\HosekWilkie_SkylightModel\ArHosekSkyModelData_Spectral.h">
+      <Filter>Graphics\HosekWilkie_SkylightModel</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Data">
       <UniqueIdentifier>{9ebcbc81-bc48-4077-9ddb-bafc37989163}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Graphics">
+      <UniqueIdentifier>{3996b25b-062b-4cfb-b0cf-6533d8fd539d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utils">
+      <UniqueIdentifier>{a48da29c-d12f-43c6-80d4-ac57c838c63a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Graphics\HosekWilkie_SkylightModel">
+      <UniqueIdentifier>{d2c87876-15bd-45ce-a172-af7c6aa97815}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -38,5 +80,10 @@
     <None Include="Data\FeatureDemoCommon.hlsli">
       <Filter>Data</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="Graphics\HosekWilkie_SkylightModel\README.txt">
+      <Filter>Graphics\HosekWilkie_SkylightModel</Filter>
+    </Text>
   </ItemGroup>
 </Project>

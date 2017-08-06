@@ -26,6 +26,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
 #include "FeatureDemo.h"
+#include "Graphics/SunLight.h"
 
 //  Halton Sampler Pattern.
 static const float kHaltonSamplePattern[8][2] = { { 1.0f / 2.0f - 0.5f, 1.0f / 3.0f - 0.5f },
@@ -140,12 +141,10 @@ void FeatureDemo::initScene(Scene::SharedPtr pScene)
     if (pScene->getLightCount() == 0)
     {
         // Create a directional light
-        DirectionalLight::SharedPtr pDirLight = DirectionalLight::create();
-        pDirLight->setWorldDirection(vec3(-0.189f, -0.861f, -0.471f));
-        pDirLight->setIntensity(vec3(1, 1, 0.985f) * 10.0f);
-        pDirLight->setName("DirLight");
-        pScene->addLight(pDirLight);
-        pScene->setAmbientIntensity(vec3(0.1f));
+        SunLight::SharedPtr pSunLight = SunLight::create();
+        pSunLight->setName("SunLight");
+        pScene->addLight(pSunLight);
+        pScene->setAmbientIntensity(vec3(0.0f));
     }
 
     mpSceneRenderer = FeatureDemoSceneRenderer::create(pScene);
@@ -230,6 +229,8 @@ void FeatureDemo::initPostProcess()
 
 void FeatureDemo::onLoad()
 {
+    SampledSpectrum::Init();
+
     mpState = GraphicsState::create();
 
     initSkyBox("LightProbes\\10-Shiodome_Stairs_3k.dds");

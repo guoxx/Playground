@@ -43,6 +43,7 @@ cbuffer PerImageCB : register(b0)
     float gLuminanceLod;
     float gWhiteScale;
 
+	// @@guoxx
 	CameraSettings gCamSettings;
 };
 
@@ -57,17 +58,18 @@ float3 calcExposedColor(float3 color, float2 texC)
     float avgLuminance = gLuminanceTex.SampleLevel(gLuminanceTexSampler, texC, gLuminanceLod).r;
     avgLuminance = exp2(avgLuminance);
 
-	float3 exposedLuminance;
+	// @@guoxx
+	float3 exposedColor;
 	if (gCamSettings.exposureMode == ExposureMode_Falcor)
 	{
-		exposedLuminance = (gExposureKey / avgLuminance)*color;
+		exposedColor = (gExposureKey / avgLuminance)*color;
 	}
 	else
 	{
 		float exposure;
-		exposedLuminance = getExposedColor(gCamSettings, color, avgLuminance, 0, exposure);
+		exposedColor = getExposedColor(gCamSettings, color, avgLuminance, 0, exposure);
 	}
-    return exposedLuminance;
+    return exposedColor;
 }
 
 float3 linearToneMap(float3 color)

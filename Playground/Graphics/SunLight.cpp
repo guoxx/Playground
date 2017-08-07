@@ -37,6 +37,7 @@
 #include "Graphics/Model/Model.h"
 #include "Utils/Spectrum.h"
 #include "HosekWilkie_SkylightModel/ArHosekSkyModel.h"
+#include "Utils/ThreadPool.h"
 
 
 namespace Falcor
@@ -67,14 +68,27 @@ namespace Falcor
         return r * glm::vec2(std::cos(theta), std::sin(theta));
     }
 
+    double LuminousEfficiency(SampledSpectrum radiance)
+    {
+        double sunRadiance = 0;
+        double sunLuminance = 0;
+        for (int i = 0; i < NumSpectralSamples; ++i)
+        {
+            sunRadiance += radiance[i] * SpectrumSamplesStep;
+            sunLuminance += radiance[i] * 683 * SampledSpectrum::Y[i] * SpectrumSamplesStep;
+        }
+        double luminousEfficiency = sunLuminance / sunRadiance;
+        return luminousEfficiency;
+    }
+
 	SunLight::SunLight()
     {
-        mTurbidity = 2.0f;
-        mTheta = glm::radians(45.0f);
-        mPhi = glm::radians(20.0f);
-        mGroundAlbedo = glm::vec3(0.5, 0.5, 0.5);
+        mData.mTurbidity = 2.0f;
+        mData.mTheta = glm::radians(45.0f);
+        mData.mPhi = glm::radians(20.0f);
+        mData.mGroundAlbedo = glm::vec3(0.5, 0.5, 0.5);
 
-        updateLightInfo();
+        updateAsnyc(mData);
     }
 
     SunLight::SharedPtr SunLight::create()
@@ -90,19 +104,19 @@ namespace Falcor
         if(!group || pGui->beginGroup(group))
         {
             bool needToUpdate = false;
-            if (pGui->addFloatVar("Theta", mTheta, 0, float(M_PI)))
+            if (pGui->addFloatVar("Theta", mData.mTheta, 0, float(M_PI_2) - 0.01f))
             {
                 needToUpdate = true;
             }
-            if (pGui->addFloatVar("Phi", mPhi, 0, float(M_PI * 2)))
+            if (pGui->addFloatVar("Phi", mData.mPhi, 0, float(M_PI * 2)))
             {
                 needToUpdate = true;
             }
-            if (pGui->addFloatVar("Turbidity", mTurbidity, 1, 10, 1))
+            if (pGui->addFloatVar("Turbidity", mData.mTurbidity, 1.7f, 10.0f, 0.1f))
             {
                 needToUpdate = true;
             }
-            if (pGui->addRgbColor("GroundAlbedo", mGroundAlbedo))
+            if (pGui->addRgbColor("GroundAlbedo", mData.mGroundAlbedo))
             {
                 needToUpdate = true;
             }
@@ -114,7 +128,7 @@ namespace Falcor
 
             if (needToUpdate)
             {
-                updateLightInfo();
+                updateAsnyc(mData);
             }
         }
     }
@@ -132,10 +146,15 @@ namespace Falcor
         logError("SunLight::move() is not used and thus not implemented for now.");
     }
 
-    SampledSpectrum SunLight::computeSunRadiance() const
+    Texture::SharedPtr SunLight::GetSkyEnvMap() const
     {
-        const SphericalCoordinates sphericalCoord = SphericalCoordinates::FromThetaAndPhi(mTheta, mPhi);
-        const SampledSpectrum groundAlbedoSpectrum = SampledSpectrum::FromRGB(mGroundAlbedo);
+        return mEnvMap;
+    }
+
+    SampledSpectrum SunLight::computeSunRadiance(float sunTheta, float sunPhi, float turbidity, glm::vec3 groundAlbedo)
+    {
+        const SphericalCoordinates sphericalCoord = SphericalCoordinates::FromThetaAndPhi(sunTheta, sunPhi);
+        const SampledSpectrum groundAlbedoSpectrum = SampledSpectrum::FromRGB(groundAlbedo);
 
         SampledSpectrum sunRadiance;
 
@@ -155,7 +174,7 @@ namespace Falcor
                 SampledSpectrum solarRadiance;
                 for (int32 i = 0; i < NumSpectralSamples; ++i)
                 {
-                    ArHosekSkyModelState* skyState = arhosekskymodelstate_alloc_init(elevation, mTurbidity, groundAlbedoSpectrum[i]);
+                    ArHosekSkyModelState* skyState = arhosekskymodelstate_alloc_init(elevation, turbidity, groundAlbedoSpectrum[i]);
                     float wavelength = glm::lerp(float(SampledLambdaStart), float(SampledLambdaEnd), i / float(NumSpectralSamples));
 
                     solarRadiance[i] = float(arhosekskymodel_solar_radiance(skyState, theta, gamma, wavelength));
@@ -170,18 +189,11 @@ namespace Falcor
         return sunRadiance;
     }
 
-    void SunLight::updateLightInfo()
+    void SunLight::updateLightInfo(const InternalData& data)
     {
-        SampledSpectrum sunRadianceSPD = computeSunRadiance();
+        SampledSpectrum sunRadianceSPD = computeSunRadiance(data.mTheta, data.mPhi, data.mTurbidity, data.mGroundAlbedo);
 
-        double sunRadiance = 0;
-        double sunLuminance = 0;
-        for (int i = 0; i < NumSpectralSamples; ++i)
-        {
-            sunRadiance += sunRadianceSPD[i] * SpectrumSamplesStep;
-            sunLuminance += sunRadianceSPD[i] * 683 * SampledSpectrum::Y[i] * SpectrumSamplesStep;
-        }
-        double luminousEfficiency = sunLuminance / sunRadiance;
+        double luminousEfficiency = LuminousEfficiency(sunRadianceSPD);
 
         RGBSpectrum radiance = sunRadianceSPD.ToRGBSpectrum();
         RGBSpectrum luminance = radiance * CIE_Y_integral * float(luminousEfficiency);
@@ -195,7 +207,95 @@ namespace Falcor
         setColorFromUI(normalizedIlluminance.ToRGB());
         setIntensityFromUI(maxIlluminance);
 
-        const SphericalCoordinates sphericalCoord = SphericalCoordinates::FromThetaAndPhi(mTheta, mPhi);
+        const SphericalCoordinates sphericalCoord = SphericalCoordinates::FromThetaAndPhi(data.mTheta, data.mPhi);
         setWorldDirection(-SphericalCoordinates::ToSphere(sphericalCoord));
+    }
+
+    void SunLight::updateEnvironmentMap(const InternalData& data)
+    {
+        const SphericalCoordinates sunCoord = SphericalCoordinates::FromThetaAndPhi(data.mTheta, data.mPhi);
+        const vec3 sunDir = SphericalCoordinates::ToSphere(sunCoord);
+
+        int32_t resolution = 1024;
+
+        int32_t nTheta = resolution;
+        int32_t nPhi = resolution * 2;
+
+        float* pixelsData = new float[sizeof(float) * 4 * nPhi * nTheta];
+
+        auto storePixel = [&](int32_t x, int32_t y, float r, float g, float b)
+        {
+            int32_t idx = (x + y * nPhi) * 4;
+            pixelsData[idx] = r;
+            pixelsData[idx + 1] = g;
+            pixelsData[idx + 2] = b;
+            pixelsData[idx + 3] = 1.0;
+        };
+
+        ArHosekSkyModelState* skyStates[3];
+
+        for (int i = 0; i < _countof(skyStates); ++i)
+        {
+            skyStates[i] = arhosek_rgb_skymodelstate_alloc_init(data.mTurbidity, data.mGroundAlbedo[i], sunCoord.GetElevation());
+        }
+
+        for (int32_t t = 0; t < nTheta; ++t)
+        {
+            float theta = (t + 0.5f) / nTheta * float(M_PI);
+
+            if (theta > M_PI_2)
+            {
+                for (int32_t p = 0; p < nPhi; ++p)
+                {
+                    storePixel(p, t, 0, 0, 0);
+                }
+                continue;
+            }
+
+            for (int32_t p = 0; p < nPhi; ++p)
+            {
+                float phi = (p + 0.5f) / nPhi * float(M_PI) * 2;
+
+                SphericalCoordinates sphericalCoord = SphericalCoordinates::FromThetaAndPhi(theta, phi);
+                glm::vec3 dir = SphericalCoordinates::ToSphere(sphericalCoord);
+
+                float gamma = std::acos(glm::clamp(glm::dot(dir, sunDir), -1.0f, 1.0f));
+
+                RGBSpectrum radiance;
+                for (int i = 0; i < _countof(skyStates); ++i)
+                {
+                    radiance[i] = float(arhosek_tristim_skymodel_radiance(skyStates[i], theta, gamma, i));
+                }
+
+                // TODO: a better way to calculate luminance
+                // approx luminous efficiency as 0.29 
+                double luminousEfficiency = 0.29 * 683.0;
+
+                RGBSpectrum luminance = radiance * float(luminousEfficiency);
+                storePixel(p, t, luminance[0], luminance[1], luminance[2]);
+            }
+        }
+
+        mOldEnvMap = mEnvMap;
+        mEnvMap = Texture::create2D(nPhi, nTheta, ResourceFormat::RGBA32Float, 1, 1, pixelsData);
+
+        for (int i = 0; i < _countof(skyStates); ++i)
+        {
+            arhosekskymodelstate_free(skyStates[i]);
+        }
+
+        delete[] pixelsData;
+    }
+
+    void SunLight::updateAsnyc(const InternalData data)
+    {
+        auto& func = [=]
+        {
+            updateLightInfo(data);
+            updateEnvironmentMap(data);
+        };
+
+        static ThreadPool<16> sThreadPool;
+        sThreadPool.getAvailable() = std::thread(func);
     }
 }

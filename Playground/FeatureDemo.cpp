@@ -138,12 +138,12 @@ void FeatureDemo::initScene(Scene::SharedPtr pScene)
         pScene->addCamera(pCamera);
     }
 
-    if (pScene->getLightCount() == 0)
+    //if (pScene->getLightCount() == 0)
     {
         // Create a directional light
-        SunLight::SharedPtr pSunLight = SunLight::create();
-        pSunLight->setName("SunLight");
-        pScene->addLight(pSunLight);
+        mpSunLight = SunLight::create();
+        mpSunLight->setName("SunLight");
+        pScene->addLight(mpSunLight);
         pScene->setAmbientIntensity(vec3(0.0f));
     }
 
@@ -199,6 +199,7 @@ void FeatureDemo::initSkyBox(const std::string& name)
 {
     Sampler::Desc samplerDesc;
     samplerDesc.setFilterMode(Sampler::Filter::Linear, Sampler::Filter::Linear, Sampler::Filter::Linear);
+    samplerDesc.setMaxAnisotropy(8);
     mSkyBox.pSampler = Sampler::create(samplerDesc);
     mSkyBox.pEffect = SkyBox::createFromTexture(name, true, mSkyBox.pSampler);
     DepthStencilState::Desc dsDesc;
@@ -266,6 +267,11 @@ void FeatureDemo::beginFrame()
         static_assert(arraysize(kHaltonSamplePattern) == arraysize(kDX11SamplePattern), "Mismatch in the array size of the sample patterns");
         uint32_t patternIndex = getFrameID() % arraysize(kHaltonSamplePattern);
         mpSceneRenderer->getScene()->getActiveCamera()->setJitter(samplePattern[patternIndex][0] / targetResolution.x, samplePattern[patternIndex][1] / targetResolution.y);
+    }
+
+    if (mSkyBox.pEffect->getTexture() != mpSunLight->GetSkyEnvMap())
+    {
+        mSkyBox.pEffect = SkyBox::create(mpSunLight->GetSkyEnvMap(), mSkyBox.pSampler);
     }
 }
 

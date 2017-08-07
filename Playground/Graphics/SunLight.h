@@ -75,14 +75,26 @@ namespace Falcor
         */
         void move(const glm::vec3& position, const glm::vec3& target, const glm::vec3& up) override;
 
+        Texture::SharedPtr GetSkyEnvMap() const;
+
     private:
-        SampledSpectrum computeSunRadiance() const;
+        static SampledSpectrum computeSunRadiance(float sunTheta, float sunPhi, float turbidity, glm::vec3 groundAlbedo);
 
-        void updateLightInfo();
+        struct InternalData
+        {
+            float mTurbidity;
+            float mTheta;
+            float mPhi;
+            vec3 mGroundAlbedo; 
+        } mData;
 
-        float mTurbidity;
-        float mTheta;
-        float mPhi;
-        vec3 mGroundAlbedo;
+        void updateLightInfo(const InternalData& data);
+
+        void updateEnvironmentMap(const InternalData& data);
+
+        void updateAsnyc(const InternalData data);
+
+        Texture::SharedPtr mEnvMap;
+        Texture::SharedPtr mOldEnvMap;
     };
 }

@@ -29,6 +29,7 @@
 #include "Falcor.h"
 #include "SampleTest.h"
 #include "FeatureDemoSceneRenderer.h"
+#include "Graphics/SunLight.h"
 
 using namespace Falcor;
 
@@ -207,6 +208,8 @@ private:
     void applyCameraPathState();
     bool mPerMaterialShader = true;
 	bool mEnableDepthPass = true;
+
+    SunLight::SharedPtr mpSunLight;
 
     // Testing 
     void onInitializeTesting() override;

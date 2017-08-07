@@ -143,9 +143,10 @@ namespace Falcor
         mpLinearSampler = Sampler::create(samplerDesc);
 
         // @@guoxx
+        // Sunny 16 rule : https://en.wikipedia.org/wiki/Sunny_16_rule
         mExposureMode = ExposureMode_Manual_SOS;
-        mShutterSpeed = ShutterSpeed::ShutterSpeed1Over30;
-        mAperture = FStop::FStop20Point0;
+        mShutterSpeed = ShutterSpeed::ShutterSpeed1Over125;
+        mAperture = FStop::FStop16Point0;
         mISO = ISORating::ISO100;
         mConstBufferData.camSettings.exposureMode = mExposureMode;
         mConstBufferData.camSettings.shutterSpeed = getShutterSpeedValue(int32_t(mShutterSpeed));

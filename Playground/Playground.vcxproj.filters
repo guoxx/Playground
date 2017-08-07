@@ -17,6 +17,9 @@
     <ClCompile Include="Graphics\HosekWilkie_SkylightModel\ArHosekSkyModel.cpp">
       <Filter>Graphics\HosekWilkie_SkylightModel</Filter>
     </ClCompile>
+    <ClCompile Include="Utils\Photometric.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ModelViewer.h" />
@@ -42,6 +45,9 @@
     </ClInclude>
     <ClInclude Include="Graphics\HosekWilkie_SkylightModel\ArHosekSkyModelData_Spectral.h">
       <Filter>Graphics\HosekWilkie_SkylightModel</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\Photometric.h">
+      <Filter>Utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

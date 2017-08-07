@@ -38,10 +38,13 @@
 #include "Utils/Spectrum.h"
 #include "HosekWilkie_SkylightModel/ArHosekSkyModel.h"
 #include "Utils/ThreadPool.h"
+#include "Utils/Photometric.h"
 
 
 namespace Falcor
 {
+    #define PHOTOMETRIC_UNITS 1
+
     /* Apparent radius of the sun as seen from the earth (in degrees).
     This is an approximation--the actual value is somewhere between
     0.526 and 0.545 depending on the time of year */
@@ -66,19 +69,6 @@ namespace Falcor
             theta = float(M_PI_2 - M_PI_4 * (uOffset.x / uOffset.y));
         }
         return r * glm::vec2(std::cos(theta), std::sin(theta));
-    }
-
-    double LuminousEfficiency(SampledSpectrum radiance)
-    {
-        double sunRadiance = 0;
-        double sunLuminance = 0;
-        for (int i = 0; i < NumSpectralSamples; ++i)
-        {
-            sunRadiance += radiance[i] * SpectrumSamplesStep;
-            sunLuminance += radiance[i] * 683 * SampledSpectrum::Y[i] * SpectrumSamplesStep;
-        }
-        double luminousEfficiency = sunLuminance / sunRadiance;
-        return luminousEfficiency;
     }
 
 	SunLight::SunLight()
@@ -193,19 +183,31 @@ namespace Falcor
     {
         SampledSpectrum sunRadianceSPD = computeSunRadiance(data.mTheta, data.mPhi, data.mTurbidity, data.mGroundAlbedo);
 
-        double luminousEfficiency = LuminousEfficiency(sunRadianceSPD);
-
-        RGBSpectrum radiance = sunRadianceSPD.ToRGBSpectrum();
-        RGBSpectrum luminance = radiance * CIE_Y_integral * float(luminousEfficiency);
-
         float theta = glm::radians(SUN_APP_ANGULAR_DIAMETER * 0.5f);
         float solidAngle = 2 * float(M_PI) * (1 - std::cos(theta));
+
+        // not intensity in radiometric or photometric
+        RGBSpectrum intensity;
+
+#if PHOTOMETRIC_UNITS
+        double luminousEfficiency = LuminousEfficiency(sunRadianceSPD);
+
+        RGBSpectrum radiance = sunRadianceSPD.ToRGBSpectrum() * CIE_Y_integral;
+        RGBSpectrum luminance = radiance * float(luminousEfficiency);
         RGBSpectrum illuminance = luminance * solidAngle;
 
-        float maxIlluminance = std::max(illuminance[0], std::max(illuminance[1], illuminance[2]));
-        RGBSpectrum normalizedIlluminance = illuminance / maxIlluminance;
-        setColorFromUI(normalizedIlluminance.ToRGB());
-        setIntensityFromUI(maxIlluminance);
+        intensity = illuminance;
+#else
+        RGBSpectrum radiance = sunRadianceSPD.ToRGBSpectrum() * CIE_Y_integral;
+        RGBSpectrum irradiance = radiance * solidAngle;
+
+        intensity = irradiance;
+#endif
+
+        float maxIntensity = std::max(intensity[0], std::max(intensity[1], intensity[2]));
+        RGBSpectrum normalizedIntensity = intensity / maxIntensity;
+        setColorFromUI(normalizedIntensity.ToRGB());
+        setIntensityFromUI(maxIntensity);
 
         const SphericalCoordinates sphericalCoord = SphericalCoordinates::FromThetaAndPhi(data.mTheta, data.mPhi);
         setWorldDirection(-SphericalCoordinates::ToSphere(sphericalCoord));
@@ -267,12 +269,13 @@ namespace Falcor
                     radiance[i] = float(arhosek_tristim_skymodel_radiance(skyStates[i], theta, gamma, i));
                 }
 
-                // TODO: a better way to calculate luminance
-                // approx luminous efficiency as 0.29 
-                double luminousEfficiency = 0.29 * 683.0;
-
+#if PHOTOMETRIC_UNITS
+                double luminousEfficiency = LuminousEfficiency(radiance);
                 RGBSpectrum luminance = radiance * float(luminousEfficiency);
                 storePixel(p, t, luminance[0], luminance[1], luminance[2]);
+#else
+                storePixel(p, t, radiance[0], radiance[1], radiance[2]);
+#endif
             }
         }
 

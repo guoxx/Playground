@@ -85,6 +85,7 @@
     <ClCompile Include="Graphics\HosekWilkie_SkylightModel\ArHosekSkyModel.cpp" />
     <ClCompile Include="Graphics\SunLight.cpp" />
     <ClCompile Include="ModelViewer.cpp" />
+    <ClCompile Include="Utils\Photometric.cpp" />
     <ClCompile Include="Utils\Spectrum.cpp" />
     <ClCompile Include="Utils\SphericalCoordinates.cpp" />
   </ItemGroup>
@@ -97,6 +98,7 @@
     <ClInclude Include="Graphics\HosekWilkie_SkylightModel\ArHosekSkyModelData_Spectral.h" />
     <ClInclude Include="Graphics\SunLight.h" />
     <ClInclude Include="ModelViewer.h" />
+    <ClInclude Include="Utils\Photometric.h" />
     <ClInclude Include="Utils\Spectrum.h" />
     <ClInclude Include="Utils\SphericalCoordinates.h" />
   </ItemGroup>

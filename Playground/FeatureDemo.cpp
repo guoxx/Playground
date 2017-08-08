@@ -158,6 +158,8 @@ void FeatureDemo::initScene(Scene::SharedPtr pScene)
     initSSAO();
     initTAA();
     mCurrentTime = 0;
+    
+    pScene->setCameraSpeed(2.0f);
 }
 
 void FeatureDemo::loadModel(const std::string& filename, bool showProgressBar)
@@ -225,7 +227,7 @@ void FeatureDemo::initTAA()
 
 void FeatureDemo::initPostProcess()
 {
-    mpToneMapper = ToneMapping::create(ToneMapping::Operator::HableUc2);
+    mpToneMapper = ToneMapping::create(ToneMapping::Operator::Aces);
 }
 
 void FeatureDemo::onLoad()
@@ -570,7 +572,9 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 {
     FeatureDemo sample;
     SampleConfig config;
-    config.windowDesc.title = "Falcor Feature Demo";
+    config.windowDesc.title = "Playground";
     config.windowDesc.resizableWindow = false;
+    config.windowDesc.width = 1280;
+    config.windowDesc.height = 720;
     sample.run(config);
 }

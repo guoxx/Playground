@@ -39,6 +39,7 @@
 #include "HosekWilkie_SkylightModel/ArHosekSkyModel.h"
 #include "Utils/ThreadPool.h"
 #include "Utils/Photometric.h"
+#include <future>
 
 
 namespace Falcor
@@ -223,12 +224,13 @@ namespace Falcor
         int32_t nTheta = resolution;
         int32_t nPhi = resolution * 2;
 
-        float* pixelsData = new float[sizeof(float) * 4 * nPhi * nTheta];
+        float* pixelsData = new float[4 * nPhi * nTheta];
+        std::memset(pixelsData, 0x00, sizeof(float) * 4 * nPhi * nTheta);
 
         auto storePixel = [&](int32_t x, int32_t y, float r, float g, float b)
         {
             int32_t idx = (x + y * nPhi) * 4;
-            pixelsData[idx] = r;
+            pixelsData[idx    ] = r;
             pixelsData[idx + 1] = g;
             pixelsData[idx + 2] = b;
             pixelsData[idx + 3] = 1.0;
@@ -236,27 +238,26 @@ namespace Falcor
 
         ArHosekSkyModelState* skyStates[3];
 
-        for (int i = 0; i < _countof(skyStates); ++i)
+        for (int i = 0; i < arraysize(skyStates); ++i)
         {
             skyStates[i] = arhosek_rgb_skymodelstate_alloc_init(data.mTurbidity, data.mGroundAlbedo[i], sunCoord.GetElevation());
         }
 
-        for (int32_t t = 0; t < nTheta; ++t)
+        auto computeSolarLuminance = [&](int32_t start, int32_t end)
         {
-            float theta = (t + 0.5f) / nTheta * float(M_PI);
-
-            if (theta > M_PI_2)
+            for (int32_t i = start; i < end; ++i)
             {
-                for (int32_t p = 0; p < nPhi; ++p)
+                int32_t x = i % nPhi;        
+                int32_t y = i / nPhi;
+
+                float theta = (y + 0.5f) / nTheta * float(M_PI);
+                float phi = (x + 0.5f) / nPhi * float(M_PI) * 2;
+
+                if (theta > M_PI_2)
                 {
-                    storePixel(p, t, 0, 0, 0);
+                    storePixel(x, y, 0, 0, 0);
+                    continue;
                 }
-                continue;
-            }
-
-            for (int32_t p = 0; p < nPhi; ++p)
-            {
-                float phi = (p + 0.5f) / nPhi * float(M_PI) * 2;
 
                 SphericalCoordinates sphericalCoord = SphericalCoordinates::FromThetaAndPhi(theta, phi);
                 glm::vec3 dir = SphericalCoordinates::ToSphere(sphericalCoord);
@@ -264,26 +265,41 @@ namespace Falcor
                 float gamma = std::acos(glm::clamp(glm::dot(dir, sunDir), -1.0f, 1.0f));
 
                 RGBSpectrum radiance;
-                for (int i = 0; i < _countof(skyStates); ++i)
+                for (int s = 0; s < arraysize(skyStates); ++s)
                 {
-                    radiance[i] = float(arhosek_tristim_skymodel_radiance(skyStates[i], theta, gamma, i));
+                    radiance[s] = float(arhosek_tristim_skymodel_radiance(skyStates[s], theta, gamma, s));
                 }
 
 #if PHOTOMETRIC_UNITS
                 double luminousEfficiency = LuminousEfficiency(radiance);
                 RGBSpectrum luminance = radiance * float(luminousEfficiency);
-                storePixel(p, t, luminance[0], luminance[1], luminance[2]);
+                storePixel(x, y, luminance[0], luminance[1], luminance[2]);
 #else
-                storePixel(p, t, radiance[0], radiance[1], radiance[2]);
+                storePixel(x, y, radiance[0], radiance[1], radiance[2]);
 #endif
             }
+        };
+
+        int32_t numPixels = nTheta * nPhi / 2;
+        int32_t numPixelsPerTask = 128;
+        int32_t numTasks = numPixels / numPixelsPerTask;
+        std::vector<std::future<void>> tasks;
+        for (int32_t t = 0; t < numTasks; ++t)
+        {
+            std::future<void> taskRet = std::async(std::launch::async, computeSolarLuminance, t * numPixelsPerTask, (t + 1) * numPixelsPerTask);
+            tasks.push_back(std::move(taskRet));
+        }
+
+        for (int32_t t = 0; t < numTasks; ++t)
+        {
+            tasks[t].wait();
         }
 
         mEnvMap = Texture::create2D(nPhi, nTheta,
                                     ResourceFormat::RGBA32Float, 1, 1, pixelsData,
                                     Resource::BindFlags::ShaderResource | Resource::BindFlags::RenderTarget);
 
-        for (int i = 0; i < _countof(skyStates); ++i)
+        for (int i = 0; i < arraysize(skyStates); ++i)
         {
             arhosekskymodelstate_free(skyStates[i]);
         }
@@ -293,13 +309,7 @@ namespace Falcor
 
     void SunLight::updateAsnyc(const InternalData data)
     {
-        auto& func = [=]
-        {
-            updateLightInfo(data);
-            updateEnvironmentMap(data);
-        };
-
-        static ThreadPool<16> sThreadPool;
-        sThreadPool.getAvailable() = std::thread(func);
+        updateLightInfo(data);
+        updateEnvironmentMap(data);
     }
 }

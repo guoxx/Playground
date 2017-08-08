@@ -33,19 +33,29 @@ __import ShaderCommon;
 
 cbuffer PerFrameCB : register(b0)
 {
-    float4x4 gWorld;
-    float gScale;
+    float4x4 gInvViewProj;
 };
 
-void main(float4 posL : POSITION, out float3 dir : NORMAL, out float4 posH : SV_POSITION)
+struct VsOut
 {
-    dir = posL.xyz;
-    float4 viewPos = mul(mul(posL, gWorld), gCam.viewMat);
-    posH = mul(viewPos, gCam.projMat);
-    posH.xy *= gScale;
-    posH.z = posH.w;
-
-#ifdef _SINGLE_PASS_STEREO
-    fixme
+    float2 texC       : TEXCOORD;
+#ifndef _VIEWPORT_MASK
+    float4 posH       : SV_POSITION;
+#else
+    float4 posH       : POSITION;
 #endif
+	float3 dir        : NORMAL;
+};
+
+VsOut main(float4 posS : POSITION, float2 texC : TEXCOORD)
+{
+    VsOut vOut;
+    vOut.texC = texC;
+	vOut.posH = float4(posS.xy, 1, 1);
+
+	float4 posWS = mul(vOut.posH, gInvViewProj);
+	posWS /= posWS.w;
+	vOut.dir = normalize(posWS.xyz);
+
+    return vOut;
 }

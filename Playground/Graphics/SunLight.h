@@ -95,6 +95,5 @@ namespace Falcor
         void updateAsnyc(const InternalData data);
 
         Texture::SharedPtr mEnvMap;
-        Texture::SharedPtr mOldEnvMap;
     };
 }

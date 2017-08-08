@@ -210,6 +210,7 @@ private:
 	bool mEnableDepthPass = true;
 
     SunLight::SharedPtr mpSunLight;
+    Texture::SharedPtr mpSkyEnvMap;
 
     // Testing 
     void onInitializeTesting() override;

@@ -78,23 +78,18 @@ namespace Falcor
         */
         Sampler::SharedPtr getSampler() const;
 
-        void setScale(float scale) { mScale = scale; }
-        float getScale() const { return mScale; }
-
     private:
         SkyBox() = default;
         bool createResources(Texture::SharedPtr& pTexture, Sampler::SharedPtr pSampler, bool renderStereo);
 
         size_t mMatOffset;
-        size_t mScaleOffset;
 
-        float mScale = 1;
-        Model::SharedPtr mpCubeModel;
+        FullScreenPass::UniquePtr mpEffect;
         Texture::SharedPtr mpTexture;
 
         GraphicsProgram::SharedPtr mpProgram;
         GraphicsVars::SharedPtr mpVars;
-        GraphicsState::SharedPtr mpState;
+        DepthStencilState::SharedPtr mpDsState;
 
         struct
         {

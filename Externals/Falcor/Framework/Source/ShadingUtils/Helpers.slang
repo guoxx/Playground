@@ -482,8 +482,17 @@ float2 dirToSphericalCrd(float3 direction)
     static const float PI = 3.14159265f;
     float3 p = normalize(direction);
     float2 uv;
+#if 1
+	// @@guoxx
+    float theta = acos(p.y);
+    float phi = atan2(p.z, p.x);
+    if (phi < 0)
+        phi += PI*2;
+	uv = float2((phi / (PI * 2)), theta / PI);
+#else
     uv.x = (1 + atan2(-p.z, p.x) / PI) * 0.5;
     uv.y = 1 - (-acos(p.y) / PI);
+#endif
     return uv;
 }
 

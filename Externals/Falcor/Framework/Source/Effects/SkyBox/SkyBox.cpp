@@ -55,13 +55,6 @@ namespace Falcor
 
         mpTexture = pTexture;
 
-        mpCubeModel = Model::createFromFile("Effects/cube.obj");
-        if(mpCubeModel == nullptr)
-        {
-            logError("Failed to load cube model for SkyBox");
-            return false;
-        }
-
         // Create the program
         Program::DefineList defines;
         if(renderStereo)
@@ -75,7 +68,8 @@ namespace Falcor
             defines.add("_SPHERICAL_MAP");
         }
 
-        mpProgram = GraphicsProgram::createFromFile("Effects\\SkyBox.vs.slang", "Effects\\Skybox.ps.slang", defines);
+        mpEffect = FullScreenPass::create("Effects\\SkyBox.vs.slang", "Effects\\Skybox.ps.slang", defines);
+        mpProgram = std::dynamic_pointer_cast<GraphicsProgram, Program>(mpEffect->getProgram());
         mpVars = GraphicsVars::create(mpProgram->getActiveVersion()->getReflector());
 
         mBindLocations.perFrameCB = getBufferBindLocation(mpProgram->getActiveVersion()->getReflector().get(), "PerFrameCB");
@@ -83,31 +77,14 @@ namespace Falcor
         mBindLocations.sampler= getResourceBindLocation(mpProgram->getActiveVersion()->getReflector().get(), "gSampler");
 
         ConstantBuffer::SharedPtr& pCB = mpVars->getConstantBuffer(mBindLocations.perFrameCB.regSpace, mBindLocations.perFrameCB.baseRegIndex, 0);
-        mScaleOffset = pCB->getVariableOffset("gScale");
-        mMatOffset = pCB->getVariableOffset("gWorld");
+        mMatOffset = pCB->getVariableOffset("gInvViewProj");
 
         mpVars->setSrv(mBindLocations.texture.regSpace, mBindLocations.texture.baseRegIndex, 0, mpTexture->getSRV());
         mpVars->setSampler(mBindLocations.sampler.regSpace, mBindLocations.sampler.baseRegIndex, 0, pSampler);
 
-        // Create state
-        mpState = GraphicsState::create();
-        BlendState::Desc blendDesc;
-        for(uint32_t i = 1 ; i < Fbo::getMaxColorTargetCount() ; i++)
-        {
-            blendDesc.setRenderTargetWriteMask(i, false, false, false, false);
-        }
-        blendDesc.setIndependentBlend(true);
-        mpState->setBlendState(BlendState::create(blendDesc));
-
-        // Create the rasterizer state
-        RasterizerState::Desc rastDesc;
-        rastDesc.setCullMode(RasterizerState::CullMode::Front).setDepthClamp(true);
-        mpState->setRasterizerState(RasterizerState::create(rastDesc));
-
         DepthStencilState::Desc dsDesc;
         dsDesc.setDepthWriteMask(false).setDepthFunc(DepthStencilState::Func::LessEqual).setDepthTest(true);
-        mpState->setDepthStencilState(DepthStencilState::create(dsDesc));
-        mpState->setProgram(mpProgram);
+        mpDsState = DepthStencilState::create(dsDesc);
 
         return true;
     }
@@ -139,18 +116,12 @@ namespace Falcor
 
     void SkyBox::render(RenderContext* pRenderCtx, Camera* pCamera)
     {
-        glm::mat4 world = glm::translate(pCamera->getPosition());
+        glm::mat4 mInvProj = pCamera->getInvViewProjMatrix();
         ConstantBuffer::SharedPtr& pCB = mpVars->getConstantBuffer(mBindLocations.perFrameCB.regSpace, mBindLocations.perFrameCB.baseRegIndex, 0);
-        pCB->setVariable(mMatOffset, world);
-        pCB->setVariable(mScaleOffset, mScale);
+        pCB->setVariable(mMatOffset, mInvProj);
 
-        mpState->setFbo(pRenderCtx->getGraphicsState()->getFbo());
         pRenderCtx->pushGraphicsVars(mpVars);
-        pRenderCtx->pushGraphicsState(mpState);
-
-        ModelRenderer::render(pRenderCtx, mpCubeModel, pCamera, false);
-
+        mpEffect->execute(pRenderCtx, mpDsState);
         pRenderCtx->popGraphicsVars();
-        pRenderCtx->popGraphicsState();
     }
 }

@@ -279,8 +279,9 @@ namespace Falcor
             }
         }
 
-        mOldEnvMap = mEnvMap;
-        mEnvMap = Texture::create2D(nPhi, nTheta, ResourceFormat::RGBA32Float, 1, 1, pixelsData);
+        mEnvMap = Texture::create2D(nPhi, nTheta,
+                                    ResourceFormat::RGBA32Float, 1, 1, pixelsData,
+                                    Resource::BindFlags::ShaderResource | Resource::BindFlags::RenderTarget);
 
         for (int i = 0; i < _countof(skyStates); ++i)
         {

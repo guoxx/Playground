@@ -271,9 +271,18 @@ void FeatureDemo::beginFrame()
         mpSceneRenderer->getScene()->getActiveCamera()->setJitter(samplePattern[patternIndex][0] / targetResolution.x, samplePattern[patternIndex][1] / targetResolution.y);
     }
 
-    if (mpSunLight->GetSkyEnvMap() != nullptr && mSkyBox.pEffect->getTexture() != mpSunLight->GetSkyEnvMap())
+    if (mpSunLight->GetSkyEnvMap() != nullptr && mpSkyEnvMap != mpSunLight->GetSkyEnvMap())
     {
-        mSkyBox.pEffect = SkyBox::create(mpSunLight->GetSkyEnvMap(), mSkyBox.pSampler);
+        if (mpSkyEnvMap == nullptr)
+        {
+            mpSkyEnvMap = mpSunLight->GetSkyEnvMap();
+            mSkyBox.pEffect = SkyBox::create(mpSkyEnvMap, mSkyBox.pSampler);
+        }
+        else
+        {
+            mpSkyEnvMap = mpSunLight->GetSkyEnvMap();
+            mpRenderContext->blit(mpSkyEnvMap->getSRV(), mSkyBox.pEffect->getTexture()->getRTV());
+        }
     }
 }
 

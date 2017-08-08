@@ -34,8 +34,20 @@ TextureCube gTexture;
 #endif
 SamplerState gSampler;
 
-float4 main(float3 dir : NORMAL) : SV_TARGET
+struct VsOut
 {
+    float2 texC       : TEXCOORD;
+#ifndef _VIEWPORT_MASK
+    float4 posH       : SV_POSITION;
+#else
+    float4 posH       : POSITION;
+#endif
+	float3 dir        : NORMAL;
+};
+
+float4 main(VsOut vOut) : SV_TARGET
+{
+	float3 dir = vOut.dir;
 #ifdef _SPHERICAL_MAP
     float2 uv = dirToSphericalCrd(dir) ;
     float4 color = gTexture.SampleLevel(gSampler, uv, 0);

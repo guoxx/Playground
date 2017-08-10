@@ -30,6 +30,7 @@
 #include "SampleTest.h"
 #include "FeatureDemoSceneRenderer.h"
 #include "Graphics/SunLight.h"
+#include "Effects/Clouds/Clouds.h"
 
 using namespace Falcor;
 
@@ -125,6 +126,7 @@ private:
 	void depthPass();
     void shadowPass();
     void renderSkyBox();
+    void renderClouds();
     void lightingPass();
     void antiAliasing();
     void resolveMSAA();
@@ -145,6 +147,7 @@ private:
     void initSSAO();
     void initEnvMap(const std::string& name);
     void initTAA();
+    void initClouds();
 
     void initControls();
 
@@ -211,6 +214,8 @@ private:
 
     SunLight::SharedPtr mpSunLight;
     Texture::SharedPtr mpSkyEnvMap;
+
+    Clouds::UniquePtr mpClouds;
 
     // Testing 
     void onInitializeTesting() override;

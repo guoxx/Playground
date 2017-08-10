@@ -157,6 +157,7 @@ void FeatureDemo::initScene(Scene::SharedPtr pScene)
     initShadowPass();
     initSSAO();
     initTAA();
+    initClouds();
     mCurrentTime = 0;
     
     pScene->setCameraSpeed(2.0f);
@@ -225,6 +226,11 @@ void FeatureDemo::initTAA()
     applyAaMode();
 }
 
+void FeatureDemo::initClouds()
+{
+    mpClouds = Clouds::create();
+}
+
 void FeatureDemo::initPostProcess()
 {
     mpToneMapper = ToneMapping::create(ToneMapping::Operator::Aces);
@@ -250,6 +256,12 @@ void FeatureDemo::renderSkyBox()
     mpState->setDepthStencilState(mSkyBox.pDS);
     mSkyBox.pEffect->render(mpRenderContext.get(), mpSceneRenderer->getScene()->getActiveCamera().get());
     mpState->setDepthStencilState(nullptr);
+}
+
+void FeatureDemo::renderClouds()
+{
+    PROFILE(clouds);
+    mpClouds->render(mpRenderContext.get(), mpSceneRenderer->getScene()->getActiveCamera().get(), mpSunLight.get());
 }
 
 void FeatureDemo::beginFrame()
@@ -471,6 +483,7 @@ void FeatureDemo::onFrameRender()
         shadowPass();
 		mpState->setFbo(mpMainFbo);
         renderSkyBox();
+        renderClouds();
         lightingPass();
         antiAliasing();
         postProcess();

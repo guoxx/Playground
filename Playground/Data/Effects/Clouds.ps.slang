@@ -41,12 +41,12 @@ SamplerState texSampler : register(s0);
 // ----
 static const float cb_appRunTime = 0;
 
-static const float cb_cloudSpeed = 0;
-static const float cb_cloudTopOffset = 0;
+static const float cb_cloudSpeed = 10.0;
+static const float cb_cloudTopOffset = 500.0;
 
-static const float3 cb_windDirection = 0;
+static const float3 cb_windDirection = float3(1.0, 0.0, 0.0);
 
-static const float3 cb_weatherTexMod = float3(1.0/256, 0, 0); // scale(x), offset(y, z)
+static const float3 cb_weatherTexMod = float3(1.0, 0, 0); // scale(x), offset(y, z)
 static const float cb_windStrength = 0;
 // ----
 
@@ -147,7 +147,7 @@ float remap(float value, float oldMin, float oldMax, float newMin, float newMax)
 float3 sampleWeather(float3 pos)
 {
 // TODO
-return 0.5;
+return float3(0.6, 0.8, 0);
 	return weatherLookup.SampleLevel(texSampler, pos.xz * WEATHER_TEX_MOD.x + WEATHER_TEX_MOD.yz + (WEATHER_TEX_MOVE_SPEED * cb_appRunTime), 0.0f).rgb;
 }
 
@@ -192,48 +192,78 @@ float sampleCloudDensity(
 	float heightFrac,
 	float lod)
 {
+	// Skew in wind direction.
 	pos += heightFrac * cb_windDirection * cb_cloudTopOffset;
-	pos += (cb_windDirection + float3(0.0f, -0.25f, 0.0f)) * cb_cloudSpeed * (cb_appRunTime/* * 25.0f*/); // the * 25.0f is just for testing to make the effect obvious
+
+	// Animate clouds in wind direction and add a small upward
+	// bias to the wind direction
+	pos += (cb_windDirection + float3(0.0f, 0.1f, 0.0f)) * cb_cloudSpeed * cb_appRunTime;
+
+	// TODO: why?
 	pos *= CLOUD_SCALE;
-	
+
+	// Read the low-frequency Perlin-Worley and Worley noises.	
 	float4 lowFreqNoise = baseShapeLookup.SampleLevel(texSampler, pos, lerp(0.0f, gClouds.mBaseShapeTextureBottomMipLevel, lod));
+
+    // Build an FBM out of the low frequency Worley noises
+    // that can be used to add detail to the low-frequency
+    // Perlin-Worley noise.
 	float lowFreqFBM =
 		(lowFreqNoise.g * 0.625f) +
 		(lowFreqNoise.b * 0.25f) +
 		(lowFreqNoise.a * 0.125f);
 
+    // define the base cloud shape by dilating it with the
+    // low-frequency FBM made of Worley noise.
 	float baseCloud = remap(
 		lowFreqNoise.r,
 		-(1.0f - lowFreqFBM), 1.0f, // gets about the same results just using -lowFreqFBM
 		0.0f, 1.0f);
 
+    // Get the density-height gradient using the density height
+    // function explained in Section 4.3.2.
 	float densityGradient = densityHeightGradient(heightFrac, getCloudType(weatherData));
+
+	// Apply the height function to the base cloud shape.
 	baseCloud *= densityGradient;
 
 	float cloudCoverage = getCoverage(weatherData);
+
+	// Use remap to apply the cloud coverage attribute.
 	float baseCloudWithCoverage = remap(
 		baseCloud,
 		1.0f - cloudCoverage, 1.0f,
 		0.0f, 1.0f);
+
+    // Multiply the result by the cloud coverage attribute so
+    // that smaller clouds are lighter and more aesthetically
+    // pleasing.
 	baseCloudWithCoverage *= cloudCoverage;
 
+	// Add some turbulence to bottoms of clouds.
 	//// TODO add curl noise
 	//// pos += curlNoise.xy * (1.0f - heightFrac);
 
+	// Sample high-frequency noises.
 	float3 highFreqNoise = erosionLookup.SampleLevel(texSampler, pos * 0.1f, lerp(0.0f, gClouds.mErosionTextureBottomMipLevel, lod)).rgb;
+
+	// Build high-frequency Worley noise FBM.
 	float highFreqFBM =
 		(highFreqNoise.r * 0.625f) +
 		(highFreqNoise.g * 0.25f) +
 		(highFreqNoise.b * 0.125f);
 
+    // Transition from wispy shapes to billowy shapes over height.
 	float highFreqNoiseModifier = lerp(highFreqFBM, 1.0f - highFreqFBM, saturate(heightFrac * 10.0f));
 
-	baseCloudWithCoverage = remap(
+    // Erode the base cloud shape with the distorted
+    // high-frequency Worley noises.
+	float finalCloud = remap(
 		baseCloudWithCoverage,
 		highFreqNoiseModifier * 0.2f, 1.0f,
 		0.0f, 1.0f);
 
-	return saturate(baseCloudWithCoverage);
+	return saturate(finalCloud);
 }
 
 float beerLambert(float sampleDensity, float precipitation)
@@ -396,7 +426,7 @@ float4 traceClouds(
 	}
 
 #if 1
-	return float4(result.xyz, saturate(result.a));
+	return float4(result.xyz, 1 - saturate(result.a));
 #else
 	// experimental fog - may not be needed if clouds are drawn before atmosphere - would have to draw sun by itself, then clouds, then atmosphere
 	// fogAmt = 0 to disable

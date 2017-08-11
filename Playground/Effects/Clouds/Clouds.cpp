@@ -79,8 +79,8 @@ namespace Falcor
 
         mpVars["PerFrameCB"]["gClouds.mSunLightDirection"] = -pSunLight->getWorldDirection();
         mpVars["PerFrameCB"]["gClouds.mSunIrradiance"] = pSunLight->getIntensity();;
-        mpVars["PerFrameCB"]["gClouds.mBaseShapeTextureBottomMipLevel"] = 0u;
-        mpVars["PerFrameCB"]["gClouds.mErosionTextureBottomMipLevel"] = 0u;
+        mpVars["PerFrameCB"]["gClouds.mBaseShapeTextureBottomMipLevel"] = 8u;
+        mpVars["PerFrameCB"]["gClouds.mErosionTextureBottomMipLevel"] = 8u;
 
         pRenderCtx->pushGraphicsVars(mpVars);
         mpEffect->execute(pRenderCtx, mpDsState, mpBlendState);

@@ -39,8 +39,6 @@ SamplerState texSampler : register(s0);
 
 
 // ----
-static const float cb_appRunTime = 0;
-
 static const float cb_cloudSpeed = 10.0;
 static const float cb_cloudTopOffset = 500.0;
 
@@ -52,7 +50,7 @@ static const float cb_windStrength = 0;
 
 static const float cb_groundRadius = 6360000;
 static const float cb_cloudVolumeStartHeight = 1500;
-static const float cb_cloudVolumeHeight = 2000;
+static const float cb_cloudVolumeHeight = 2500;
 
 static const float VOLUME_END_HEIGHT = cb_cloudVolumeStartHeight + cb_cloudVolumeHeight;
 // planet center (world space)
@@ -69,9 +67,9 @@ static const float2 WEATHER_TEX_MOVE_SPEED = float2(cb_windStrength * cb_windDir
 // samples based on shell thickness between inner and outer volume
 static const uint2 SAMPLE_RANGE = uint2(64u, 128u);
 
-static const float4 STRATUS_GRADIENT = float4(0.02f, 0.05f, 0.09f, 0.11f);
-static const float4 STRATOCUMULUS_GRADIENT = float4(0.02f, 0.2f, 0.48f, 0.625f);
-static const float4 CUMULUS_GRADIENT = float4(0.01f, 0.0625f, 0.78f, 1.0f); // these fractions would need to be altered if cumulonimbus are added to the same pass
+static const float4 STRATUS_GRADIENT = float4(0.011f, 0.098f, 0.126f, 0.225f);
+static const float4 STRATOCUMULUS_GRADIENT = float4(0.015f, 0.2f, 0.25f, 0.4f);
+static const float4 CUMULUS_GRADIENT = float4(0.02f, 0.2f, 0.48f, 0.625f); // these fractions would need to be altered if cumulonimbus are added to the same pass
 
 // random vectors on the unit sphere
 static const float3 RANDOM_VECTORS[] =
@@ -147,8 +145,8 @@ float remap(float value, float oldMin, float oldMax, float newMin, float newMax)
 float3 sampleWeather(float3 pos)
 {
 // TODO
-return float3(0.6, 0.8, 0);
-	return weatherLookup.SampleLevel(texSampler, pos.xz * WEATHER_TEX_MOD.x + WEATHER_TEX_MOD.yz + (WEATHER_TEX_MOVE_SPEED * cb_appRunTime), 0.0f).rgb;
+return gClouds.mWeatherData;
+	return weatherLookup.SampleLevel(texSampler, pos.xz * WEATHER_TEX_MOD.x + WEATHER_TEX_MOD.yz + (WEATHER_TEX_MOVE_SPEED * gClouds.mAppRunTime), 0.0f).rgb;
 }
 
 float getCoverage(float3 weatherData)
@@ -172,18 +170,36 @@ float heightFraction(float3 pos)
 	return saturate((distance(pos, PLANET_CENTER) - PLANET_CENTER_TO_LOWER_CLOUD_RADIUS) / cb_cloudVolumeHeight);
 }
 
+float gradientStep(float a, float4 gradient)
+{
+	return remap(a, gradient.x, gradient.y, 0, 1) * remap(a, gradient.z, gradient.w, 1, 0);
+	//return smoothstep(gradient.x, gradient.y, a) - smoothstep(gradient.z, gradient.w, a);
+}
+
 float4 mixGradients(float cloudType)
 {
+	if (cloudType < 0.5)
+	{
+		return lerp(STRATUS_GRADIENT, STRATOCUMULUS_GRADIENT, cloudType * 2.0);
+	}
+	else
+	{
+		return lerp(STRATOCUMULUS_GRADIENT, CUMULUS_GRADIENT, (cloudType - 0.5) * 2.0);
+	}
+
+/*
 	float stratus = 1.0f - saturate(cloudType * 2.0f);
 	float stratocumulus = 1.0f - abs(cloudType - 0.5f) * 2.0f;
 	float cumulus = saturate(cloudType - 0.5f) * 2.0f;
 	return STRATUS_GRADIENT * stratus + STRATOCUMULUS_GRADIENT * stratocumulus + CUMULUS_GRADIENT * cumulus;
+*/
 }
 
 float densityHeightGradient(float heightFrac, float cloudType)
 {
 	float4 cloudGradient = mixGradients(cloudType);
-	return smoothstep(cloudGradient.x, cloudGradient.y, heightFrac) - smoothstep(cloudGradient.z, cloudGradient.w, heightFrac);
+	return remap(heightFrac, cloudGradient.x, cloudGradient.y, 0, 1) * remap(heightFrac, cloudGradient.z, cloudGradient.w, 1, 0);
+	//return smoothstep(cloudGradient.x, cloudGradient.y, heightFrac) - smoothstep(cloudGradient.z, cloudGradient.w, heightFrac);
 }
 
 float sampleCloudDensity(
@@ -197,7 +213,7 @@ float sampleCloudDensity(
 
 	// Animate clouds in wind direction and add a small upward
 	// bias to the wind direction
-	pos += (cb_windDirection + float3(0.0f, 0.1f, 0.0f)) * cb_cloudSpeed * cb_appRunTime;
+	pos += (cb_windDirection + float3(0.0f, 0.1f, 0.0f)) * cb_cloudSpeed * gClouds.mAppRunTime;
 
 	// TODO: why?
 	pos *= CLOUD_SCALE;
@@ -416,10 +432,10 @@ float4 traceClouds(
 				cloudDensity);
 
 			float3 ambientBadApprox = ambientLight(heightFrac) * min(1.0f, length(gClouds.mSunIrradiance.rgb * 0.0125f)) * transmittance;
-			float4 source = float4((gClouds.mSunIrradiance.rgb * lightDensity) + ambientBadApprox/*+ ambientLight(heightFrac)*/, cloudDensity * transmittance); // TODO enable ambient when added to constant buffer
+			float4 source = float4((gClouds.mSunIrradiance.rgb * lightDensity) + ambientBadApprox, cloudDensity * transmittance); // TODO enable ambient when added to constant buffer
 			source.rgb *= source.a;
 			result = (1.0f - result.a) * source + result;
-			if(result.a >= 1.0f) break;
+			//if(result.a >= 1.0f) break;
 		}
 
 		pos += posStep;

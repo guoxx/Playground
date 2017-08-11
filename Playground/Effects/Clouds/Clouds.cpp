@@ -31,6 +31,7 @@
 #include "Graphics/TextureHelper.h"
 #include "Graphics/Camera/Camera.h"
 #include "Graphics/SunLight.h"
+#include "Utils/Gui.h"
 
 namespace Falcor
 {
@@ -73,7 +74,21 @@ namespace Falcor
         return true;
     }
 
-    void Clouds::render(RenderContext* pRenderCtx, Camera* pCamera, SunLight* pSunLight)
+    void Clouds::renderUI(Gui* pGui, const char* group)
+    {
+        if (!group || pGui->beginGroup(group))
+        {
+            pGui->addFloatVar("Coverage", mWeatherData.r, 0, 1);
+            pGui->addFloatVar("Precipitation", mWeatherData.g, 0, 1);
+            pGui->addFloatVar("CloudType", mWeatherData.b, 0, 1);
+            if (group)
+            {
+                pGui->endGroup();
+            }
+        }
+    }
+
+    void Clouds::render(RenderContext* pRenderCtx, Camera* pCamera, SunLight* pSunLight, float globalTime)
     {
         pCamera->setIntoConstantBuffer(mpVars["PerFrameCB"].get(), "gClouds.mCamera");
 
@@ -81,6 +96,9 @@ namespace Falcor
         mpVars["PerFrameCB"]["gClouds.mSunIrradiance"] = pSunLight->getIntensity();;
         mpVars["PerFrameCB"]["gClouds.mBaseShapeTextureBottomMipLevel"] = 8u;
         mpVars["PerFrameCB"]["gClouds.mErosionTextureBottomMipLevel"] = 8u;
+        mpVars["PerFrameCB"]["gClouds.mWeatherData"] = mWeatherData;
+        mpVars["PerFrameCB"]["gClouds.mAppRunTime"] = globalTime;
+
 
         pRenderCtx->pushGraphicsVars(mpVars);
         mpEffect->execute(pRenderCtx, mpDsState, mpBlendState);

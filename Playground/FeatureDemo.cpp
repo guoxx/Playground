@@ -261,7 +261,7 @@ void FeatureDemo::renderSkyBox()
 void FeatureDemo::renderClouds()
 {
     PROFILE(clouds);
-    mpClouds->render(mpRenderContext.get(), mpSceneRenderer->getScene()->getActiveCamera().get(), mpSunLight.get());
+    mpClouds->render(mpRenderContext.get(), mpSceneRenderer->getScene()->getActiveCamera().get(), mpSunLight.get(), mCurrentTime);
 }
 
 void FeatureDemo::beginFrame()

@@ -117,6 +117,8 @@ void FeatureDemo::applyAaMode()
 
 void FeatureDemo::onGuiRender()
 {
+    mpClouds->renderUI(mpGui.get(), "Clouds");
+
     static const char* kImageFileString = "Image files\0*.jpg;*.bmp;*.dds;*.png;*.tiff;*.tif;*.tga\0\0";
     if (mpGui->addButton("Load Model"))
     {

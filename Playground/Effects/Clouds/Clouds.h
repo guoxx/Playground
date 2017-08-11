@@ -38,6 +38,7 @@
 
 namespace Falcor
 {
+    class Gui;
     class SunLight;
     class RenderContext;
 
@@ -48,7 +49,9 @@ namespace Falcor
 
         static UniquePtr create();
 
-        void render(RenderContext* pRenderCtx, Camera* pCamera, SunLight* pSunLight);
+        void Clouds::renderUI(Gui* pGui, const char* group);
+
+        void render(RenderContext* pRenderCtx, Camera* pCamera, SunLight* pSunLight, float globalTime);
 
     private:
         Clouds() = default;
@@ -62,5 +65,7 @@ namespace Falcor
 
         BlendState::SharedPtr mpBlendState;
         DepthStencilState::SharedPtr mpDsState;
+
+        glm::vec3 mWeatherData;
     };
 }

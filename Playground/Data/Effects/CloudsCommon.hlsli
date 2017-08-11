@@ -40,6 +40,10 @@ struct CloudsSettings
 
 	uint mBaseShapeTextureBottomMipLevel;
 	uint mErosionTextureBottomMipLevel;
+
+    float3 mWeatherData;
+
+    float mAppRunTime;
 };
 
 cbuffer PerFrameCB : register(b0)

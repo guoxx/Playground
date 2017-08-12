@@ -34,9 +34,7 @@ VsOut main(float4 posS : POSITION, float2 texC : TEXCOORD)
     vOut.texC = texC;
 	vOut.posH = float4(posS.xy, 1, 1);
 
-	float4 posWS = mul(vOut.posH, gClouds.mCamera.invViewProj);
-	posWS /= posWS.w;
-	vOut.dir = normalize(posWS.xyz);
+	vOut.dir = float3(posS.xy, 1);
 
     return vOut;
 }

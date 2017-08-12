@@ -33,7 +33,8 @@ __import ShaderCommon;
 
 Texture3D baseShapeLookup : register(t0);
 Texture3D erosionLookup : register(t1);
-Texture2D weatherLookup : register(t2);
+Texture2D curlNoiseLookup : register(t2);
+Texture2D weatherLookup : register(t3);
 
 SamplerState texSampler : register(s0);
 
@@ -44,23 +45,24 @@ static const float cb_cloudTopOffset = 500.0;
 
 static const float3 cb_windDirection = float3(1.0, 0.0, 0.0);
 
-static const float3 cb_weatherTexMod = float3(1.0, 0, 0); // scale(x), offset(y, z)
+static const float3 cb_weatherTexMod = float3(2.0, 0, 0); // scale(x), offset(y, z)
 static const float cb_windStrength = 0;
 // ----
 
+static float cloudDistortionScale = 0.5;
 static const float cb_groundRadius = 6360000;
 static const float cb_cloudVolumeStartHeight = 1500;
 static const float cb_cloudVolumeHeight = 2500;
 
 static const float VOLUME_END_HEIGHT = cb_cloudVolumeStartHeight + cb_cloudVolumeHeight;
 // planet center (world space)
-static const float3 PLANET_CENTER = float3(0.0f, -cb_groundRadius - 100.0f, 0.0f); // TODO revisit - 100.0f offset is to match planet sky settings
+static const float3 PLANET_CENTER = float3(0.0f, -cb_groundRadius, 0.0f);
 // radius from the planet center to the bottom of the cloud volume
 static const float PLANET_CENTER_TO_LOWER_CLOUD_RADIUS = cb_groundRadius + cb_cloudVolumeStartHeight;
 // radius from the planet center to the top of the cloud volume
 static const float PLANET_CENTER_TO_UPPER_CLOUD_RADIUS = cb_groundRadius + VOLUME_END_HEIGHT;
 
-static const float CLOUD_SCALE = 1.0f / VOLUME_END_HEIGHT;
+static const float CLOUD_SCALE = 1.0f / VOLUME_END_HEIGHT * 4;
 static const float3 WEATHER_TEX_MOD = float3(1.0f / (VOLUME_END_HEIGHT * cb_weatherTexMod.x), cb_weatherTexMod.y, cb_weatherTexMod.z); 
 static const float2 WEATHER_TEX_MOVE_SPEED = float2(cb_windStrength * cb_windDirection.x, cb_windStrength * cb_windDirection.z); // this is modded by app run time
 
@@ -68,8 +70,8 @@ static const float2 WEATHER_TEX_MOVE_SPEED = float2(cb_windStrength * cb_windDir
 static const uint2 SAMPLE_RANGE = uint2(64u, 128u);
 
 static const float4 STRATUS_GRADIENT = float4(0.011f, 0.098f, 0.126f, 0.225f);
-static const float4 STRATOCUMULUS_GRADIENT = float4(0.015f, 0.2f, 0.25f, 0.4f);
-static const float4 CUMULUS_GRADIENT = float4(0.02f, 0.2f, 0.48f, 0.625f); // these fractions would need to be altered if cumulonimbus are added to the same pass
+static const float4 STRATOCUMULUS_GRADIENT = float4(0.0f, 0.096f, 0.311f, 0.506f);
+static const float4 CUMULUS_GRADIENT = float4(0.0f, 0.087f, 0.749f, 1.0f);
 
 // random vectors on the unit sphere
 static const float3 RANDOM_VECTORS[] =
@@ -144,9 +146,16 @@ float remap(float value, float oldMin, float oldMax, float newMin, float newMax)
 
 float3 sampleWeather(float3 pos)
 {
-// TODO
-return gClouds.mWeatherData;
-	return weatherLookup.SampleLevel(texSampler, pos.xz * WEATHER_TEX_MOD.x + WEATHER_TEX_MOD.yz + (WEATHER_TEX_MOVE_SPEED * gClouds.mAppRunTime), 0.0f).rgb;
+#if 1
+	float2 uv = pos.xz * WEATHER_TEX_MOD.x;// + WEATHER_TEX_MOD.yz + (WEATHER_TEX_MOVE_SPEED * gClouds.mAppRunTime);
+	uv = uv * 0.5 + 0.5;
+	float3 data = weatherLookup.SampleLevel(texSampler, uv, 0.0f).rgb;
+	return float3(saturate(remap(data.b, 0.1, 1.0, 0, 1)), gClouds.mWeatherData.g, gClouds.mWeatherData.b);
+#else
+	float2 uv = pos.xz * WEATHER_TEX_MOD.x;// + WEATHER_TEX_MOD.yz + (WEATHER_TEX_MOVE_SPEED * gClouds.mAppRunTime);
+	uv = uv * 0.5 + 0.5;
+	return weatherLookup.SampleLevel(texSampler, uv, 0.0f).rgb;
+#endif
 }
 
 float getCoverage(float3 weatherData)
@@ -172,12 +181,12 @@ float heightFraction(float3 pos)
 
 float gradientStep(float a, float4 gradient)
 {
-	return remap(a, gradient.x, gradient.y, 0, 1) * remap(a, gradient.z, gradient.w, 1, 0);
-	//return smoothstep(gradient.x, gradient.y, a) - smoothstep(gradient.z, gradient.w, a);
+	return smoothstep(gradient.x, gradient.y, a) - smoothstep(gradient.z, gradient.w, a);
 }
 
 float4 mixGradients(float cloudType)
 {
+#if 1
 	if (cloudType < 0.5)
 	{
 		return lerp(STRATUS_GRADIENT, STRATOCUMULUS_GRADIENT, cloudType * 2.0);
@@ -186,20 +195,22 @@ float4 mixGradients(float cloudType)
 	{
 		return lerp(STRATOCUMULUS_GRADIENT, CUMULUS_GRADIENT, (cloudType - 0.5) * 2.0);
 	}
-
-/*
+#else
 	float stratus = 1.0f - saturate(cloudType * 2.0f);
 	float stratocumulus = 1.0f - abs(cloudType - 0.5f) * 2.0f;
 	float cumulus = saturate(cloudType - 0.5f) * 2.0f;
 	return STRATUS_GRADIENT * stratus + STRATOCUMULUS_GRADIENT * stratocumulus + CUMULUS_GRADIENT * cumulus;
-*/
+#endif
 }
 
 float densityHeightGradient(float heightFrac, float cloudType)
 {
 	float4 cloudGradient = mixGradients(cloudType);
+#if 0
 	return remap(heightFrac, cloudGradient.x, cloudGradient.y, 0, 1) * remap(heightFrac, cloudGradient.z, cloudGradient.w, 1, 0);
-	//return smoothstep(cloudGradient.x, cloudGradient.y, heightFrac) - smoothstep(cloudGradient.z, cloudGradient.w, heightFrac);
+#else
+	return smoothstep(cloudGradient.x, cloudGradient.y, heightFrac) - smoothstep(cloudGradient.z, cloudGradient.w, heightFrac);
+#endif
 }
 
 float sampleCloudDensity(
@@ -243,8 +254,16 @@ float sampleCloudDensity(
 	// Apply the height function to the base cloud shape.
 	baseCloud *= densityGradient;
 
+	//baseCloud *= pow(1 - heightFrac, 2);
+
 	float cloudCoverage = getCoverage(weatherData);
 
+	float anvil_bias = 0;
+	cloudCoverage = pow(cloudCoverage, remap(1-heightFrac, 0.7, 0.8, 1.0, lerp(1.0, 0.5, anvil_bias)));
+
+#if 0
+	float baseCloudWithCoverage = saturate(remap(baseCloud, saturate(heightFrac / cloudCoverage), 1.0, 0.0, 1.0)) * cloudCoverage;
+#else
 	// Use remap to apply the cloud coverage attribute.
 	float baseCloudWithCoverage = remap(
 		baseCloud,
@@ -255,13 +274,14 @@ float sampleCloudDensity(
     // that smaller clouds are lighter and more aesthetically
     // pleasing.
 	baseCloudWithCoverage *= cloudCoverage;
+#endif
 
 	// Add some turbulence to bottoms of clouds.
-	//// TODO add curl noise
-	//// pos += curlNoise.xy * (1.0f - heightFrac);
+	float4 curlNoise = curlNoiseLookup.Sample(texSampler, pos.xz * cloudDistortionScale);
+	pos.xz += curlNoise.xy * (1.0f - heightFrac);
 
 	// Sample high-frequency noises.
-	float3 highFreqNoise = erosionLookup.SampleLevel(texSampler, pos * 0.1f, lerp(0.0f, gClouds.mErosionTextureBottomMipLevel, lod)).rgb;
+	float3 highFreqNoise = erosionLookup.SampleLevel(texSampler, pos * 0.1f, lerp(0.0f, gClouds.mErosionTextureBottomMipLevel, lod)).gba;
 
 	// Build high-frequency Worley noise FBM.
 	float highFreqFBM =
@@ -270,7 +290,7 @@ float sampleCloudDensity(
 		(highFreqNoise.b * 0.125f);
 
     // Transition from wispy shapes to billowy shapes over height.
-	float highFreqNoiseModifier = lerp(highFreqFBM, 1.0f - highFreqFBM, saturate(heightFrac * 10.0f));
+	float highFreqNoiseModifier = lerp(highFreqFBM, 1.0f - highFreqFBM, heightFrac);
 
     // Erode the base cloud shape with the distorted
     // high-frequency Worley noises.
@@ -279,7 +299,7 @@ float sampleCloudDensity(
 		highFreqNoiseModifier * 0.2f, 1.0f,
 		0.0f, 1.0f);
 
-	return saturate(finalCloud);
+	return finalCloud;
 }
 
 float beerLambert(float sampleDensity, float precipitation)
@@ -456,12 +476,14 @@ float4 traceClouds(
 
 float4 main(VsOut pIn) : SV_TARGET
 {
-	float3 viewDirW = normalize(pIn.dir);
+	float4 posW = mul(float4(pIn.dir, 1), gClouds.mCamera.invViewProj);
+	posW /= posW.w;
+
 	float3 eyePosW = gClouds.mCamera.position;
+	float3 viewDirW = normalize(posW.xyz - eyePosW);
 
 	// @@guoxx: we are limited to ground view, so depth test is good enough for us
 	bool depthPresent = false;
-	float3 posW = 0;
 
 	// find nearest planet surface point
 	float2 ph = 0.0f;
@@ -500,7 +522,7 @@ float4 main(VsOut pIn) : SV_TARGET
 	if(eyeRadius < PLANET_CENTER_TO_LOWER_CLOUD_RADIUS) // under inner shell
 	{
 		// exit if there's something in front of the start of the cloud volume
-		if((depthPresent && (distance(posW, eyePosW) < distance(innerShellHit, eyePosW))) ||
+		if((depthPresent && (distance(posW.xyz, eyePosW) < distance(innerShellHit, eyePosW))) ||
 			planetHits > 0u) // shell hits are guaranteed, but the ground may be occluding cloud layer
 		{
 			return float4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -518,7 +540,7 @@ float4 main(VsOut pIn) : SV_TARGET
 		// 2) enter outer shell, leave outer shell
 		float3 firstShellHit = outerShellHit;
 		if(outerShellHits == 0u ||
-			(depthPresent && (distance(posW, eyePosW) < distance(firstShellHit, eyePosW))))
+			(depthPresent && (distance(posW.xyz, eyePosW) < distance(firstShellHit, eyePosW))))
 		{
 			return float4(0.0f, 0.0f, 0.0f, 0.0f);
 		}
@@ -538,9 +560,9 @@ float4 main(VsOut pIn) : SV_TARGET
 		 */
 		float3 shellHit = innerShellHits > 0u ? innerShellHit : outerShellHit;
 		// if there's something in the depth buffer that's closer, that's the end point
-		if(depthPresent && (distance(posW, eyePosW) < distance(shellHit, eyePosW)))
+		if(depthPresent && (distance(posW.xyz, eyePosW) < distance(shellHit, eyePosW)))
 		{
-			shellHit = posW;
+			shellHit = posW.xyz;
 		}
 		return traceClouds(
 			eyePosW,

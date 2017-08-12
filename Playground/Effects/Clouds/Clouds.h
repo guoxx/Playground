@@ -58,6 +58,9 @@ namespace Falcor
         bool createResources();
 
         Texture::SharedPtr mpLowFreqNoisesTex;
+        Texture::SharedPtr mpHighFreqNoisesTex;
+        Texture::SharedPtr mpCurlNoisesTex;
+        Texture::SharedPtr mpWeatherTex;
 
         FullScreenPass::UniquePtr mpEffect;
         GraphicsProgram::SharedPtr mpProgram;

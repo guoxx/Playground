@@ -159,8 +159,6 @@ void FeatureDemo::initScene(Scene::SharedPtr pScene)
     initTAA();
     initClouds();
     mCurrentTime = 0;
-    
-    pScene->setCameraSpeed(2.0f);
 }
 
 void FeatureDemo::loadModel(const std::string& filename, bool showProgressBar)
@@ -248,6 +246,10 @@ void FeatureDemo::onLoad()
     initializeTesting();
 
     loadModel("Sponza/Sponza.fbx", true);
+    //mpSceneRenderer->getScene()->getCamera(0)->setPosition(glm::vec3(0, 4005, 0));
+    //mpSceneRenderer->getScene()->getCamera(0)->move(glm::vec3(0, 4005, 0), glm::vec3(0, 0, 10), glm::vec3(1, 0, 0));
+    //mpSceneRenderer->getScene()->getCamera(0)->setDepthRange(0.1f, 25000);
+    //mpSceneRenderer->getScene()->setCameraSpeed(200.0f);
 }
 
 void FeatureDemo::renderSkyBox()

@@ -55,8 +55,18 @@ namespace Falcor
         mpLowFreqNoisesTex = createTextureFromFile("Textures\\CloudsLowFrequencyNoises.dds", false, false);
         mpVars->setTexture("baseShapeLookup", mpLowFreqNoisesTex);
 
+        mpHighFreqNoisesTex = createTextureFromFile("Textures\\CloudsHighFrequencyNoises.dds", false, false);
+        mpVars->setTexture("erosionLookup", mpHighFreqNoisesTex);
+
+        mpCurlNoisesTex = createTextureFromFile("Textures\\CurlNoise.png", false, false);
+        mpVars->setTexture("curlNoiseLookup", mpCurlNoisesTex);
+
+        mpWeatherTex = createTextureFromFile("Textures\\weather_data.png", false, false);
+        mpVars->setTexture("weatherLookup", mpWeatherTex);
+
         Sampler::Desc samplerDesc;
         samplerDesc.setFilterMode(Sampler::Filter::Linear, Sampler::Filter::Linear, Sampler::Filter::Linear);
+        samplerDesc.setMaxAnisotropy(8);
         Sampler::SharedPtr pSampler = Sampler::create(samplerDesc);
         mpVars->setSampler("texSampler", pSampler);
 

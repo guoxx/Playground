@@ -150,7 +150,7 @@ float3 sampleWeather(float3 pos)
 	float2 uv = pos.xz * WEATHER_TEX_MOD.x;// + WEATHER_TEX_MOD.yz + (WEATHER_TEX_MOVE_SPEED * gClouds.mAppRunTime);
 	uv = uv * 0.5 + 0.5;
 	float3 data = weatherLookup.SampleLevel(texSampler, uv, 0.0f).rgb;
-	return float3(saturate(remap(data.b, 0.1, 1.0, 0, 1)), gClouds.mWeatherData.g, gClouds.mWeatherData.b);
+	return float3(saturate(remap(data.b, 0.1, 1.0, 0, 0.8)), gClouds.mWeatherData.g, gClouds.mWeatherData.b);
 #else
 	float2 uv = pos.xz * WEATHER_TEX_MOD.x;// + WEATHER_TEX_MOD.yz + (WEATHER_TEX_MOVE_SPEED * gClouds.mAppRunTime);
 	uv = uv * 0.5 + 0.5;
@@ -431,6 +431,7 @@ float4 traceClouds(
 	float4 result = 0.0f;
 	float density = 0.0f;
 	
+	[loop]
 	for(uint i = 0u; i < sampleCount; ++i)
 	{
 		float heightFrac = heightFraction(pos);

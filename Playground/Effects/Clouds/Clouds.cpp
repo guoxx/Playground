@@ -79,6 +79,10 @@ namespace Falcor
         bsDesc.setRtParams(0, BlendState::BlendOp::Add, BlendState::BlendOp::Add,
                            BlendState::BlendFunc::One, BlendState::BlendFunc::SrcAlpha,
                            BlendState::BlendFunc::Zero, BlendState::BlendFunc::One);
+        for (uint32_t i = 1; i < Fbo::getMaxColorTargetCount(); ++i)
+        {
+            bsDesc.setRenderTargetWriteMask(i, false, false, false, false);
+        }
         mpBlendState = BlendState::create(bsDesc);
 
         return true;
@@ -102,7 +106,7 @@ namespace Falcor
     {
         pCamera->setIntoConstantBuffer(mpVars["PerFrameCB"].get(), "gClouds.mCamera");
 
-        mpVars["PerFrameCB"]["gClouds.mSunLightDirection"] = -pSunLight->getWorldDirection();
+        mpVars["PerFrameCB"]["gClouds.mSunLightDirection"] = pSunLight->getWorldDirection();
         mpVars["PerFrameCB"]["gClouds.mSunIrradiance"] = pSunLight->getIntensity();;
         mpVars["PerFrameCB"]["gClouds.mBaseShapeTextureBottomMipLevel"] = 8u;
         mpVars["PerFrameCB"]["gClouds.mErosionTextureBottomMipLevel"] = 8u;

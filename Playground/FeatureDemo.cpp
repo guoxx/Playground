@@ -598,7 +598,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
     SampleConfig config;
     config.windowDesc.title = "Playground";
     config.windowDesc.resizableWindow = false;
-    config.windowDesc.width = 1280;
-    config.windowDesc.height = 720;
+    config.windowDesc.width = 1600;
+    config.windowDesc.height = 900;
     sample.run(config);
 }

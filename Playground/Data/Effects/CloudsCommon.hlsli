@@ -35,6 +35,8 @@ struct CloudsSettings
 {
     CameraData mCamera;
 
+    float mGlobalTime;
+
 	float3 mSunLightDirection;      // light direction world space
 	float3 mSunIrradiance;          // irradiance of sun light
 
@@ -43,7 +45,9 @@ struct CloudsSettings
 
     float3 mWeatherData;
 
-    float mAppRunTime;
+    int mEnableHighFreqNoise;
+    int mEnableCurlNoise;
+    int mEnableHeightFade;
 };
 
 cbuffer PerFrameCB : register(b0)

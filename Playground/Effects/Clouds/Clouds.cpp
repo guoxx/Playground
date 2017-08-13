@@ -92,9 +92,14 @@ namespace Falcor
     {
         if (!group || pGui->beginGroup(group))
         {
-            pGui->addFloatVar("Coverage", mWeatherData.r, 0, 1);
-            pGui->addFloatVar("Precipitation", mWeatherData.g, 0, 1);
-            pGui->addFloatVar("CloudType", mWeatherData.b, 0, 1);
+            pGui->addFloatVar("Coverage", mControls.mWeatherData.r, 0, 1);
+            pGui->addFloatVar("Precipitation", mControls.mWeatherData.g, 0, 1);
+            pGui->addFloatVar("CloudType", mControls.mWeatherData.b, 0, 1);
+
+            pGui->addCheckBox("Enable High Frequency Noise", mControls.mEnableHighFreqNoise);
+            pGui->addCheckBox("Enable Curl Noise", mControls.mEnableCurlNoise);
+            pGui->addCheckBox("Enable Height Fade", mControls.mEnableHeightFade);
+
             if (group)
             {
                 pGui->endGroup();
@@ -106,13 +111,15 @@ namespace Falcor
     {
         pCamera->setIntoConstantBuffer(mpVars["PerFrameCB"].get(), "gClouds.mCamera");
 
+        mpVars["PerFrameCB"]["gClouds.mGlobalTime"] = globalTime;
         mpVars["PerFrameCB"]["gClouds.mSunLightDirection"] = pSunLight->getWorldDirection();
         mpVars["PerFrameCB"]["gClouds.mSunIrradiance"] = pSunLight->getIntensity();;
-        mpVars["PerFrameCB"]["gClouds.mBaseShapeTextureBottomMipLevel"] = 8u;
-        mpVars["PerFrameCB"]["gClouds.mErosionTextureBottomMipLevel"] = 8u;
-        mpVars["PerFrameCB"]["gClouds.mWeatherData"] = mWeatherData;
-        mpVars["PerFrameCB"]["gClouds.mAppRunTime"] = globalTime;
-
+        mpVars["PerFrameCB"]["gClouds.mBaseShapeTextureBottomMipLevel"] = mControls.mBaseShapeTextureBottomMipLevel;
+        mpVars["PerFrameCB"]["gClouds.mErosionTextureBottomMipLevel"] = mControls.mErosionTextureBottomMipLevel;
+        mpVars["PerFrameCB"]["gClouds.mWeatherData"] = mControls.mWeatherData;
+        mpVars["PerFrameCB"]["gClouds.mEnableHighFreqNoise"] = mControls.mEnableHighFreqNoise;
+        mpVars["PerFrameCB"]["gClouds.mEnableCurlNoise"] = mControls.mEnableCurlNoise;
+        mpVars["PerFrameCB"]["gClouds.mEnableHeightFade"] = mControls.mEnableHeightFade;
 
         pRenderCtx->pushGraphicsVars(mpVars);
         mpEffect->execute(pRenderCtx, mpDsState, mpBlendState);

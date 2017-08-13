@@ -42,6 +42,19 @@ namespace Falcor
     class SunLight;
     class RenderContext;
 
+    class CloudsControl
+    {
+    public:
+        uint32_t mBaseShapeTextureBottomMipLevel = 8u;
+        uint32_t mErosionTextureBottomMipLevel = 8u;
+
+        bool mEnableHighFreqNoise = true;
+        bool mEnableCurlNoise = true;
+        bool mEnableHeightFade = true;
+
+        glm::vec3 mWeatherData = glm::zero<vec3>();
+    };
+
     class Clouds
     {
     public:
@@ -69,6 +82,6 @@ namespace Falcor
         BlendState::SharedPtr mpBlendState;
         DepthStencilState::SharedPtr mpDsState;
 
-        glm::vec3 mWeatherData;
+        CloudsControl mControls;
     };
 }

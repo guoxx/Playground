@@ -45,8 +45,8 @@ namespace Falcor
     class CloudsControl
     {
     public:
-        uint32_t mBaseShapeTextureBottomMipLevel = 8u;
-        uint32_t mErosionTextureBottomMipLevel = 8u;
+        uint32_t mBaseShapeTextureBottomMipLevel = 2u;
+        uint32_t mErosionTextureBottomMipLevel = 2u;
 
         bool mEnableHighFreqNoise = true;
         bool mEnableCurlNoise = true;

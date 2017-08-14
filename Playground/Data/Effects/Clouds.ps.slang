@@ -221,6 +221,19 @@ float smoothThreshold(float value, float threshold, float edgeSize)
 	return smoothstep(threshold, threshold + edgeSize, value);
 }
 
+// To simplify: wavelength independent scattering and extinction
+void getParticipatingMedia(out float muS, out float muE, in float cloudDensity, in float3 weatherData)
+{
+    const float kCloudsScattering = 0.001;
+	const float kCloudsAbsorption = 0.0001;
+
+    muS = kCloudsScattering * cloudDensity;
+    float muA = kCloudsAbsorption * cloudDensity * getPrecipitation(weatherData);
+
+	// to avoid division by zero extinction
+    muE = max(0.000000001, muA + muS);
+}
+
 float sampleCloudDensity(
 	float3 pos,
 	float3 weatherData,
@@ -234,7 +247,6 @@ float sampleCloudDensity(
 	// bias to the wind direction
 	pos += (cb_windDirection + float3(0.0f, 0.1f, 0.0f)) * cb_cloudSpeed * gClouds.mGlobalTime;
 
-	// TODO: why?
 	pos *= CLOUD_SCALE;
 
 	// Read the low-frequency Perlin-Worley and Worley noises.	
@@ -346,7 +358,7 @@ float henyeyGreenstein(
 	float g)
 {
 	float g2 = g * g;
-	return ((1.0f - g2) / pow((1.0f + g2 - 2.0f * g * lightDotEye), 1.5f)) * 0.25f;
+	return ((1.0f - g2) / pow((1.0f + g2 - 2.0f * g * lightDotEye), 1.5f)) * (0.25f * M_1_PIf);
 }
 
 float lightEnergy(
@@ -370,28 +382,37 @@ float3 ambientLight(float heightFrac)
 		heightFrac);
 }
 
-float sampleCloudDensityAlongCone(
+float3 sampleCloudDensityAlongCone(
 	float3 startPos,
 	float  stepSize,
 	float  lightDotEye,
 	float  originalDensity)
 {
 	float3 lightStep = stepSize * -gClouds.mSunLightDirection;
+
 	float3 pos = startPos;
+
 	float coneRadius = 1.0f;
+
 	float coneStep = RCP_LIGHT_RAY_ITERATIONS;
+
 	float densityAlongCone = 0.0f;
+
 	float lod = 0.0f;
 	float lodStride = RCP_LIGHT_RAY_ITERATIONS;
+
 	float3 weatherData = 0.0f;
+
 	float rcpThickness = 1.0f / (stepSize * LIGHT_RAY_ITERATIONS);
+
 	float density = 0.0f;
 
-	for(uint i = 0u; i < LIGHT_RAY_ITERATIONS; ++i)
+	for (uint i = 0u; i < LIGHT_RAY_ITERATIONS; ++i)
 	{
 		float3 conePos = pos + coneRadius * RANDOM_VECTORS[i] * float(i + 1u);
 		float heightFrac = heightFraction(conePos);
-		if(heightFrac <= 1.0f)
+
+		if (heightFrac <= 1.0f)
 		{
 			weatherData = sampleWeather(conePos);
 			float cloudDensity = sampleCloudDensity(
@@ -399,13 +420,15 @@ float sampleCloudDensityAlongCone(
 				weatherData,
 				heightFrac,
 				lod);
-			if(cloudDensity > 0.0f)
+
+			if (cloudDensity > 0.0f)
 			{
 				density += cloudDensity;
 				float transmittance = 1.0f - (density * rcpThickness);
 				densityAlongCone += (cloudDensity * transmittance);
 			}
 		}
+
 		pos += lightStep;
 		coneRadius += coneStep;
 		lod += lodStride;
@@ -434,6 +457,32 @@ float sampleCloudDensityAlongCone(
 		lerp(1.0f, 2.0f, getPrecipitation(weatherData))));
 }
 
+float volumetricShadow(in float3 from, in float3 to)
+{
+    const float numStep = 16.0; // quality control. Bump to avoid shadow alisaing
+    float shadow = 1.0;
+    float muS = 0.0;
+    float muE = 0.0;
+    float dd = length(to-from) / numStep;
+    for(float s=0.5; s<(numStep-0.1); s+=1.0)// start at 0.5 to sample at center of integral part
+    {
+        float3 pos = from + (to-from)*(s/(numStep));
+
+		float heightFrac = heightFraction(pos);
+		float3 weatherData = sampleWeather(pos);
+
+		float cloudDensity = sampleCloudDensity(
+			pos,
+			weatherData,
+			heightFrac,
+			0.0f);
+
+        getParticipatingMedia(muS, muE, cloudDensity, weatherData);
+        shadow *= exp(-muE * dd);
+    }
+    return shadow;
+}
+
 float4 traceClouds(
 	float3 eyePosW,			// world space view position
 	float3 viewDirW,		// world space view direction
@@ -441,25 +490,31 @@ float4 traceClouds(
 	float3 endPos)			// world space end position
 {
 	float3 dir = endPos - startPos;
+
 	float thickness = length(dir);
 	float rcpThickness = 1.0f / thickness;
+
 	uint sampleCount = lerp(SAMPLE_RANGE.x, SAMPLE_RANGE.y, saturate((thickness - cb_cloudVolumeHeight) / cb_cloudVolumeHeight));
+
 	float stepSize = thickness / float(sampleCount);
 	dir /= thickness;
 	float3 posStep = stepSize * dir;
 
 	float lightDotEye = -dot(gClouds.mSunLightDirection, viewDirW);
 
-	float3 pos = startPos;
-	float3 weatherData = 0.0f;
-	float4 result = 0.0f;
-	float density = 0.0f;
-	
+    // Initialise volumetric scattering integration (to view)
+    float transmittance = 1.0;
+    float3 scatteredLight = float3(0.0, 0.0, 0.0);
+
 	[loop]
 	for(uint i = 0u; i < sampleCount; ++i)
 	{
+		// mid point of a segment for approximation
+		float3 pos = startPos + posStep * (float(i) + 0.5);
+
 		float heightFrac = heightFraction(pos);
-		weatherData = sampleWeather(pos);
+		float3 weatherData = sampleWeather(pos);
+
 		float cloudDensity = sampleCloudDensity(
 			pos,
 			weatherData,
@@ -468,35 +523,32 @@ float4 traceClouds(
 
 		if(cloudDensity > 0.0f)
 		{
-			density += cloudDensity;
-			float transmittance = 1.0f - (density * rcpThickness);
-			float lightDensity = sampleCloudDensityAlongCone(
+			float3 lightDensity = gClouds.mSunIrradiance / M_1_PIf / 4 * volumetricShadow(pos, pos + thickness * -gClouds.mSunLightDirection);
+
+#if 0
+			float3 lightDensity = sampleCloudDensityAlongCone(
 				pos,
 				stepSize,
 				lightDotEye,
 				cloudDensity);
+#endif
 
-			float3 ambientBadApprox = ambientLight(heightFrac) * min(1.0f, length(gClouds.mSunIrradiance.rgb * 0.0125f)) * transmittance;
-			float4 source = float4((gClouds.mSunIrradiance.rgb * lightDensity) + ambientBadApprox, cloudDensity * transmittance); // TODO enable ambient when added to constant buffer
-			source.rgb *= source.a;
-			result = (1.0f - result.a) * source + result;
-			//if(result.a >= 1.0f) break;
+			float muS = 0.0;
+			float muE = 0.0;
+			getParticipatingMedia(muS, muE, cloudDensity, weatherData);
+
+			// integrate along the current step segment
+            float3 inScattering = (lightDensity - lightDensity * exp(-muE * stepSize)) / muE * muS;
+
+			 // accumulate and also take into account the transmittance from previous steps
+            scatteredLight += transmittance * inScattering;
+
+            // Evaluate transmittance to view independentely
+            transmittance *= exp(-muE * stepSize);
 		}
-
-		pos += posStep;
 	}
 
-#if 1
-	return float4(result.xyz, 1 - saturate(result.a));
-#else
-	// experimental fog - may not be needed if clouds are drawn before atmosphere - would have to draw sun by itself, then clouds, then atmosphere
-	// fogAmt = 0 to disable
-	float fogAmt = 1.0f - exp(-distance(startPos, eyePosW) * 0.00001f);
-	float3 fogColor = float3(0.3f, 0.4f, 0.45f) * length(gClouds.mSunIrradiance.rgb * 0.125f) * 0.8f;
-	float3 sunColor = normalize(gClouds.mSunIrradiance.rgb) * 4.0f * length(gClouds.mSunIrradiance.rgb * 0.125f);
-	fogColor = lerp(fogColor, sunColor, pow(saturate(lightDotEye), 8.0f));
-	return float4(clamp(lerp(result.rgb, fogColor, fogAmt), 0.0f, 1000.0f), saturate(result.a));
-#endif
+	return float4(scatteredLight, transmittance);
 }
 
 float4 main(VsOut pIn) : SV_TARGET

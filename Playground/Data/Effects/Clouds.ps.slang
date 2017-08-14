@@ -224,11 +224,13 @@ float smoothThreshold(float value, float threshold, float edgeSize)
 // To simplify: wavelength independent scattering and extinction
 void getParticipatingMedia(out float muS, out float muE, in float cloudDensity, in float3 weatherData)
 {
-    const float kCloudsScattering = 0.001;
-	const float kCloudsAbsorption = 0.0001;
+    const float kCloudsScattering = 0.005;
+	const float kCloudsAbsorption = 0.005;
 
-    muS = kCloudsScattering * cloudDensity;
-    float muA = kCloudsAbsorption * cloudDensity * getPrecipitation(weatherData);
+	float f = 1.0 - pow(1.0 - cloudDensity, 2);
+
+    muS = kCloudsScattering * f;
+    float muA = kCloudsAbsorption * f * getPrecipitation(weatherData);
 
 	// to avoid division by zero extinction
     muE = max(0.000000001, muA + muS);
@@ -278,8 +280,10 @@ float sampleCloudDensity(
 
 	float cloudCoverage = getCoverage(weatherData);
 
+#if 0
 	float anvil_bias = 0;
 	cloudCoverage = pow(cloudCoverage, remap(1-heightFrac, 0.7, 0.8, 1.0, lerp(1.0, 0.5, anvil_bias)));
+#endif
 
 #if 0
 	float baseCloudWithCoverage = saturate(remap(baseCloud, saturate(heightFrac / cloudCoverage), 1.0, 0.0, 1.0)) * cloudCoverage;
@@ -320,7 +324,7 @@ float sampleCloudDensity(
 			(highFreqNoise.b * 0.125f);
 
 	    // Transition from wispy shapes to billowy shapes over height.
-		float highFreqNoiseModifier = lerp(highFreqFBM, 1.0f - highFreqFBM, heightFrac);
+		float highFreqNoiseModifier = lerp(highFreqFBM, 1.0f - highFreqFBM, saturate(heightFrac * 2));
 
 	    // Erode the base cloud shape with the distorted
 	    // high-frequency Worley noises.
@@ -359,6 +363,11 @@ float henyeyGreenstein(
 {
 	float g2 = g * g;
 	return ((1.0f - g2) / pow((1.0f + g2 - 2.0f * g * lightDotEye), 1.5f)) * (0.25f * M_1_PIf);
+}
+
+float twoLobeseHenyeyGreenstein(float lightDotEye)
+{
+	return lerp(henyeyGreenstein(lightDotEye, 0.8f), henyeyGreenstein(lightDotEye, -0.5f), 0.5f);
 }
 
 float lightEnergy(
@@ -460,11 +469,11 @@ float3 sampleCloudDensityAlongCone(
 float volumetricShadow(in float3 from, in float3 to)
 {
     const float numStep = 16.0; // quality control. Bump to avoid shadow alisaing
-    float shadow = 1.0;
-    float muS = 0.0;
-    float muE = 0.0;
+
     float dd = length(to-from) / numStep;
-    for(float s=0.5; s<(numStep-0.1); s+=1.0)// start at 0.5 to sample at center of integral part
+    float shadow = 1.0;
+
+    for (float s=0.5; s<(numStep-0.1); s+=1.0)// start at 0.5 to sample at center of integral part
     {
         float3 pos = from + (to-from)*(s/(numStep));
 
@@ -477,8 +486,13 @@ float volumetricShadow(in float3 from, in float3 to)
 			heightFrac,
 			0.0f);
 
-        getParticipatingMedia(muS, muE, cloudDensity, weatherData);
-        shadow *= exp(-muE * dd);
+		if (cloudDensity > 0)
+		{
+		    float muS = 0.0;
+			float muE = 0.0;
+			getParticipatingMedia(muS, muE, cloudDensity, weatherData);
+			shadow *= exp(-muE * dd);
+		}
     }
     return shadow;
 }
@@ -507,10 +521,10 @@ float4 traceClouds(
     float3 scatteredLight = float3(0.0, 0.0, 0.0);
 
 	[loop]
-	for(uint i = 0u; i < sampleCount; ++i)
+	for(float i = 0.5; i < float(sampleCount); i += 1)
 	{
 		// mid point of a segment for approximation
-		float3 pos = startPos + posStep * (float(i) + 0.5);
+		float3 pos = startPos + posStep * i;
 
 		float heightFrac = heightFraction(pos);
 		float3 weatherData = sampleWeather(pos);
@@ -523,22 +537,18 @@ float4 traceClouds(
 
 		if(cloudDensity > 0.0f)
 		{
-			float3 lightDensity = gClouds.mSunIrradiance / M_1_PIf / 4 * volumetricShadow(pos, pos + thickness * -gClouds.mSunLightDirection);
-
-#if 0
-			float3 lightDensity = sampleCloudDensityAlongCone(
-				pos,
-				stepSize,
-				lightDotEye,
-				cloudDensity);
-#endif
+			float3 lightDensity = gClouds.mSunIrradiance *
+									twoLobeseHenyeyGreenstein(lightDotEye) *
+									volumetricShadow(pos, pos + (sampleCount - i - 0.5) * stepSize * -gClouds.mSunLightDirection);
+			
+			//lightDensity += gClouds.mSunIrradiance * 0.05;
 
 			float muS = 0.0;
 			float muE = 0.0;
 			getParticipatingMedia(muS, muE, cloudDensity, weatherData);
 
 			// integrate along the current step segment
-            float3 inScattering = (lightDensity - lightDensity * exp(-muE * stepSize)) / muE * muS;
+            float3 inScattering = (lightDensity - lightDensity * exp(-muE * stepSize)) * (muS / muE);
 
 			 // accumulate and also take into account the transmittance from previous steps
             scatteredLight += transmittance * inScattering;

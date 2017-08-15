@@ -45,15 +45,15 @@ static const float cb_cloudTopOffset = 500.0;
 
 static const float3 cb_windDirection = float3(1.0, 0.0, 0.0);
 
-static const float3 cb_weatherTexMod = float3(2.0, 0, 0); // scale(x), offset(y, z)
+static const float3 cb_weatherTexMod = float3(10.0, 0, 0); // scale(x), offset(y, z)
 static const float cb_windStrength = 0;
 // ----
 
-static float cloudBottomFade = 0.3;
+static float cloudBottomFade = 0.5;
 static float highFreqNoiseScale = 8;
-static float cloudDistortion = 0.45;
+static float cloudDistortion = 0.353;
 static float cloudDistortionScale = 0.5;
-static const float cb_groundRadius = 6360000;
+static const float cb_groundRadius = 407583;
 static const float cb_cloudVolumeStartHeight = 1500;
 static const float cb_cloudVolumeHeight = 2500;
 
@@ -65,7 +65,7 @@ static const float PLANET_CENTER_TO_LOWER_CLOUD_RADIUS = cb_groundRadius + cb_cl
 // radius from the planet center to the top of the cloud volume
 static const float PLANET_CENTER_TO_UPPER_CLOUD_RADIUS = cb_groundRadius + VOLUME_END_HEIGHT;
 
-static const float CLOUD_SCALE = 1.0f / VOLUME_END_HEIGHT * 4;
+static const float CLOUD_SCALE = 1.0f / VOLUME_END_HEIGHT;
 static const float3 WEATHER_TEX_MOD = float3(1.0f / (VOLUME_END_HEIGHT * cb_weatherTexMod.x), cb_weatherTexMod.y, cb_weatherTexMod.z); 
 static const float2 WEATHER_TEX_MOVE_SPEED = float2(cb_windStrength * cb_windDirection.x, cb_windStrength * cb_windDirection.z); // this is modded by app run time
 
@@ -153,7 +153,7 @@ float3 sampleWeather(float3 pos)
 	float2 uv = pos.xz * WEATHER_TEX_MOD.x;// + WEATHER_TEX_MOD.yz + (WEATHER_TEX_MOVE_SPEED * gClouds.mGlobalTime);
 	uv = uv * 0.5 + 0.5;
 	float3 data = weatherLookup.SampleLevel(texSampler, uv, 0.0f).rgb;
-	return float3(saturate(remap(data.b, 0.1, 1.0, 0, 0.8)), gClouds.mWeatherData.g, gClouds.mWeatherData.b);
+	return float3(data.r, gClouds.mWeatherData.g, 1.0f - data.b);
 #else
 	float2 uv = pos.xz * WEATHER_TEX_MOD.x;// + WEATHER_TEX_MOD.yz + (WEATHER_TEX_MOVE_SPEED * gClouds.mGlobalTime);
 	uv = uv * 0.5 + 0.5;
@@ -227,33 +227,28 @@ float sampleCloudDensity(
 	float heightFrac,
 	float lod)
 {
+/*
 	// Skew in wind direction.
 	pos += heightFrac * cb_windDirection * cb_cloudTopOffset;
 
 	// Animate clouds in wind direction and add a small upward
 	// bias to the wind direction
 	pos += (cb_windDirection + float3(0.0f, 0.1f, 0.0f)) * cb_cloudSpeed * gClouds.mGlobalTime;
+*/
 
-	// TODO: why?
-	pos *= CLOUD_SCALE;
+	float3 coord = pos * CLOUD_SCALE;
 
 	// Read the low-frequency Perlin-Worley and Worley noises.	
-	float4 lowFreqNoise = baseShapeLookup.SampleLevel(texSampler, pos, lerp(0.0f, gClouds.mBaseShapeTextureBottomMipLevel, lod));
+	float4 lowFreqNoise = baseShapeLookup.SampleLevel(texSampler, coord, lerp(0.0f, gClouds.mBaseShapeTextureBottomMipLevel, lod));
 
-    // Build an FBM out of the low frequency Worley noises
-    // that can be used to add detail to the low-frequency
-    // Perlin-Worley noise.
-	float lowFreqFBM =
-		(lowFreqNoise.g * 0.625f) +
-		(lowFreqNoise.b * 0.25f) +
-		(lowFreqNoise.a * 0.125f);
+	float4 gradientScalar = float4( 1.0,
+		gradientStep(heightFrac, STRATUS_GRADIENT),
+		gradientStep(heightFrac, STRATOCUMULUS_GRADIENT),
+		gradientStep(heightFrac, CUMULUS_GRADIENT));
 
-    // define the base cloud shape by dilating it with the
-    // low-frequency FBM made of Worley noise.
-	float baseCloud = remap(
-		lowFreqNoise.r,
-		-(1.0f - lowFreqFBM), 1.0f, // gets about the same results just using -lowFreqFBM
-		0.0f, 1.0f);
+	lowFreqNoise *= gradientScalar;
+
+	float baseCloud = saturate((lowFreqNoise.r + lowFreqNoise.g + lowFreqNoise.b + lowFreqNoise.a) / 4.0);
 
     // Get the density-height gradient using the density height
     // function explained in Section 4.3.2.
@@ -262,13 +257,14 @@ float sampleCloudDensity(
 	// Apply the height function to the base cloud shape.
 	baseCloud *= densityGradient;
 
-	//baseCloud *= 1 - pow(heightFrac, 22);
+	float _SampleThreshold = 0.149;
+	float _ErosionEdgeSize = 0.202;
+	baseCloud = smoothThreshold(baseCloud, _SampleThreshold, _ErosionEdgeSize);
 
 	float cloudCoverage = getCoverage(weatherData);
+	float baseCloudWithCoverage = saturate(baseCloud - (1.0 - cloudCoverage)) * cloudCoverage;
 
-	float anvil_bias = 0;
-	cloudCoverage = pow(cloudCoverage, remap(1-heightFrac, 0.7, 0.8, 1.0, lerp(1.0, 0.5, anvil_bias)));
-
+#if 0
 #if 0
 	float baseCloudWithCoverage = saturate(remap(baseCloud, saturate(heightFrac / cloudCoverage), 1.0, 0.0, 1.0)) * cloudCoverage;
 #else
@@ -283,39 +279,31 @@ float sampleCloudDensity(
     // pleasing.
 	baseCloudWithCoverage *= cloudCoverage;
 #endif
+#endif
 
 	float finalCloud = baseCloudWithCoverage;
 
 	if (gClouds.mEnableHighFreqNoise)
 	{
-		float3 coord = pos * highFreqNoiseScale;
+		float3 newCoord = coord * highFreqNoiseScale;
 
 		if (gClouds.mEnableCurlNoise)
 		{
 			// Add some turbulence to bottoms of clouds.
-			float3 curlNoise = curlNoiseLookup.Sample(texSampler, pos.xy * cloudDistortionScale).rgb;
-			curlNoise *= cloudDistortion * (1.0f - heightFrac);
-			coord += curlNoise;
+			float3 curlNoise = curlNoiseLookup.Sample(texSampler, coord.xy * cloudDistortionScale).rgb;
+			curlNoise *= cloudDistortion * heightFrac;
+			newCoord += curlNoise;
 		}
 
 		// Sample high-frequency noises.
-		float3 highFreqNoise = erosionLookup.SampleLevel(texSampler, coord, lerp(0.0f, gClouds.mErosionTextureBottomMipLevel, lod)).gba;
+		float3 highFreqNoise = 1.0f - erosionLookup.SampleLevel(texSampler, newCoord, lerp(0.0f, gClouds.mErosionTextureBottomMipLevel, lod)).rgb;
 
-		// Build high-frequency Worley noise FBM.
-		float highFreqFBM =
-			(highFreqNoise.r * 0.625f) +
-			(highFreqNoise.g * 0.25f) +
-			(highFreqNoise.b * 0.125f);
+		highFreqNoise *= gradientScalar.gba;
 
-	    // Transition from wispy shapes to billowy shapes over height.
-		float highFreqNoiseModifier = lerp(highFreqFBM, 1.0f - highFreqFBM, heightFrac);
+		float highFreqNoiseModifier = (highFreqNoise.r + highFreqNoise.g + highFreqNoise.b) / 3.0f;
 
-	    // Erode the base cloud shape with the distorted
-	    // high-frequency Worley noises.
-		finalCloud = remap(
-			baseCloudWithCoverage,
-			highFreqNoiseModifier * 0.2f, 1.0f,
-			0.0f, 1.0f);
+		highFreqNoiseModifier *= smoothstep( 1.0, 0.0, finalCloud) * 0.5;
+		finalCloud -= highFreqNoiseModifier;
 	}
 
 	if (gClouds.mEnableHeightFade)
@@ -323,7 +311,7 @@ float sampleCloudDensity(
 		finalCloud *= smoothstep(0.0, cloudBottomFade, heightFrac);
 	}
 
-	return finalCloud;
+	return saturate(finalCloud);
 }
 
 float beerLambert(float sampleDensity, float precipitation)

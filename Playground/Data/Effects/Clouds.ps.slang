@@ -70,7 +70,7 @@ static const float3 WEATHER_TEX_MOD = float3(1.0f / (VOLUME_END_HEIGHT * cb_weat
 static const float2 WEATHER_TEX_MOVE_SPEED = float2(cb_windStrength * cb_windDirection.x, cb_windStrength * cb_windDirection.z); // this is modded by app run time
 
 // samples based on shell thickness between inner and outer volume
-static const uint2 SAMPLE_RANGE = uint2(256u, 512u);
+static const uint2 SAMPLE_RANGE = uint2(64u, 128u);
 
 static const float4 STRATUS_GRADIENT = float4(0.011f, 0.098f, 0.126f, 0.225f);
 static const float4 STRATOCUMULUS_GRADIENT = float4(0.0f, 0.096f, 0.311f, 0.506f);
@@ -153,7 +153,7 @@ float3 sampleWeather(float3 pos)
 	uv = uv * 0.5 + 0.5;
 	//uv += WEATHER_TEX_MOD.yz + (WEATHER_TEX_MOVE_SPEED * gClouds.mGlobalTime);
 	float3 data = weatherLookup.SampleLevel(texSampler, uv, 0.0f).rgb;
-	return float3(data.r, gClouds.mWeatherData.g, gClouds.mWeatherData.b);
+	return float3(data.r, gClouds.mWeatherData.g, 1.0f - data.b);
 }
 
 float getCoverage(float3 weatherData)
@@ -245,20 +245,14 @@ float sampleCloudDensity(
 	// Read the low-frequency Perlin-Worley and Worley noises.	
 	float4 lowFreqNoise = baseShapeLookup.SampleLevel(texSampler, coord, lerp(0.0f, gClouds.mBaseShapeTextureBottomMipLevel, lod));
 
-    // Build an FBM out of the low frequency Worley noises
-    // that can be used to add detail to the low-frequency
-    // Perlin-Worley noise.
-	float lowFreqFBM =
-		(lowFreqNoise.g * 0.625f) +
-		(lowFreqNoise.b * 0.25f) +
-		(lowFreqNoise.a * 0.125f);
+	float4 gradientScalar = float4(1.0,
+		gradientStep(heightFrac, STRATUS_GRADIENT),
+		gradientStep(heightFrac, STRATOCUMULUS_GRADIENT),
+		gradientStep(heightFrac, CUMULUS_GRADIENT));
 
-    // define the base cloud shape by dilating it with the
-    // low-frequency FBM made of Worley noise.
-	float baseCloud = remap(
-		lowFreqNoise.r,
-		-(1.0f - lowFreqFBM), 1.0f, // gets about the same results just using -lowFreqFBM
-		0.0f, 1.0f);
+	lowFreqNoise *= gradientScalar;
+
+    float baseCloud = saturate((lowFreqNoise.r + lowFreqNoise.g + lowFreqNoise.b + lowFreqNoise.a) / 4.0f);
 
     // Get the density-height gradient using the density height
 	float densityGradient = densityHeightGradient(heightFrac, getCloudType(weatherData));
@@ -266,44 +260,29 @@ float sampleCloudDensity(
 	// Apply the height function to the base cloud shape.
 	baseCloud *= densityGradient;
 
+	float _SampleThreshold = 0.149;
+	float _ErosionEdgeSize = 0.202;
+	baseCloud = smoothThreshold(baseCloud, _SampleThreshold, _ErosionEdgeSize);
+
 	float cloudCoverage = getCoverage(weatherData);
-
-#if 0
-	float anvil_bias = 0;
-	cloudCoverage = pow(cloudCoverage, remap(1-heightFrac, 0.7, 0.8, 1.0, lerp(1.0, 0.5, anvil_bias)));
-#endif
-
-#if 0
-	float baseCloudWithCoverage = saturate(remap(baseCloud, saturate(heightFrac / cloudCoverage), 1.0, 0.0, 1.0)) * cloudCoverage;
-#else
-	// Use remap to apply the cloud coverage attribute.
-	float baseCloudWithCoverage = saturate(remap(
-		baseCloud,
-		1.0f - cloudCoverage, 1.0f,
-		0.0f, 1.0f));
-
-    // Multiply the result by the cloud coverage attribute so
-    // that smaller clouds are lighter and more aesthetically
-    // pleasing.
-	baseCloudWithCoverage *= cloudCoverage;
-#endif
+	float baseCloudWithCoverage = saturate(baseCloud - (1.0f - cloudCoverage)) * cloudCoverage;
 
 	float finalCloud = baseCloudWithCoverage;
 
-	if (gClouds.mEnableHighFreqNoise)
+	if (gClouds.mEnableHighFreqNoise > 0 && finalCloud > 0 && finalCloud < 1.0)
 	{
 		float3 newCoord = coord * highFreqNoiseScale;
 
 		if (gClouds.mEnableCurlNoise)
 		{
 			// Add some turbulence to bottoms of clouds.
-			float3 curlNoise = curlNoiseLookup.Sample(texSampler, newCoord.xy * cloudDistortionScale).rgb;
+			float3 curlNoise = curlNoiseLookup.Sample(texSampler, coord.xy * cloudDistortionScale).rgb;
 			curlNoise *= cloudDistortion * (1.0f - heightFrac);
 			coord += curlNoise;
 		}
 
 		// Sample high-frequency noises.
-		float3 highFreqNoise = erosionLookup.SampleLevel(texSampler, newCoord, lerp(0.0f, gClouds.mErosionTextureBottomMipLevel, lod)).gba;
+		float3 highFreqNoise = erosionLookup.SampleLevel(texSampler, newCoord, lerp(0.0f, gClouds.mErosionTextureBottomMipLevel, lod)).rgb;
 
 		// Build high-frequency Worley noise FBM.
 		float highFreqFBM =

@@ -98,7 +98,6 @@ namespace Falcor
 
             pGui->addCheckBox("Enable High Frequency Noise", mControls.mEnableHighFreqNoise);
             pGui->addCheckBox("Enable Curl Noise", mControls.mEnableCurlNoise);
-            pGui->addCheckBox("Enable Height Fade", mControls.mEnableHeightFade);
 
             if (group)
             {
@@ -117,9 +116,9 @@ namespace Falcor
         mpVars["PerFrameCB"]["gClouds.mBaseShapeTextureBottomMipLevel"] = mControls.mBaseShapeTextureBottomMipLevel;
         mpVars["PerFrameCB"]["gClouds.mErosionTextureBottomMipLevel"] = mControls.mErosionTextureBottomMipLevel;
         mpVars["PerFrameCB"]["gClouds.mWeatherData"] = mControls.mWeatherData;
+        mpVars["PerFrameCB"]["gClouds.mSkyAmbient"] = pSunLight->GetSkyAmbient();
         mpVars["PerFrameCB"]["gClouds.mEnableHighFreqNoise"] = mControls.mEnableHighFreqNoise;
         mpVars["PerFrameCB"]["gClouds.mEnableCurlNoise"] = mControls.mEnableCurlNoise;
-        mpVars["PerFrameCB"]["gClouds.mEnableHeightFade"] = mControls.mEnableHeightFade;
 
         pRenderCtx->pushGraphicsVars(mpVars);
         mpEffect->execute(pRenderCtx, mpDsState, mpBlendState);

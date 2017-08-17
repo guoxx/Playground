@@ -50,7 +50,6 @@ namespace Falcor
 
         bool mEnableHighFreqNoise = true;
         bool mEnableCurlNoise = true;
-        bool mEnableHeightFade = true;
 
         glm::vec3 mWeatherData = glm::zero<vec3>();
     };

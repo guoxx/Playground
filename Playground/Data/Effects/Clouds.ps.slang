@@ -45,7 +45,7 @@ static const float cb_cloudTopOffset = 500.0;
 
 static const float3 cb_windDirection = float3(1.0, 0.0, 0.0);
 
-static const float3 cb_weatherTexMod = float3(2.0, 0, 0); // scale(x), offset(y, z)
+static const float3 cb_weatherTexMod = float3(16.0, 0, 0); // scale(x), offset(y, z)
 static const float cb_windStrength = 0;
 // ----
 
@@ -53,7 +53,7 @@ static float cloudBottomFade = 0.3;
 static float highFreqNoiseScale = 8;
 static float cloudDistortion = 0.45;
 static float cloudDistortionScale = 0.5;
-static const float cb_groundRadius = 6360000;
+static const float cb_groundRadius = 400000;
 static const float cb_cloudVolumeStartHeight = 1500;
 static const float cb_cloudVolumeHeight = 2500;
 
@@ -65,7 +65,7 @@ static const float PLANET_CENTER_TO_LOWER_CLOUD_RADIUS = cb_groundRadius + cb_cl
 // radius from the planet center to the top of the cloud volume
 static const float PLANET_CENTER_TO_UPPER_CLOUD_RADIUS = cb_groundRadius + VOLUME_END_HEIGHT;
 
-static const float CLOUD_SCALE = 1.0f / VOLUME_END_HEIGHT * 4;
+static const float CLOUD_SCALE = 1.0f / VOLUME_END_HEIGHT * 2;
 static const float3 WEATHER_TEX_MOD = float3(1.0f / (VOLUME_END_HEIGHT * cb_weatherTexMod.x), cb_weatherTexMod.y, cb_weatherTexMod.z); 
 static const float2 WEATHER_TEX_MOVE_SPEED = float2(cb_windStrength * cb_windDirection.x, cb_windStrength * cb_windDirection.z); // this is modded by app run time
 
@@ -75,20 +75,6 @@ static const uint2 SAMPLE_RANGE = uint2(64u, 128u);
 static const float4 STRATUS_GRADIENT = float4(0.011f, 0.098f, 0.126f, 0.225f);
 static const float4 STRATOCUMULUS_GRADIENT = float4(0.0f, 0.096f, 0.311f, 0.506f);
 static const float4 CUMULUS_GRADIENT = float4(0.0f, 0.087f, 0.749f, 1.0f);
-
-// random vectors on the unit sphere
-static const float3 RANDOM_VECTORS[] =
-{
-	float3( 0.38051305f,  0.92453449f, -0.02111345f),
-	float3(-0.50625799f, -0.03590792f, -0.86163418f),
-	float3(-0.32509218f, -0.94557439f,  0.01428793f),
-	float3( 0.09026238f, -0.27376545f,  0.95755165f),
-	float3( 0.28128598f,  0.42443639f, -0.86065785f),
-	float3(-0.16852403f,  0.14748697f,  0.97460106f)
-};
-
-static const uint LIGHT_RAY_ITERATIONS = 6u;
-static const float RCP_LIGHT_RAY_ITERATIONS = 1.0f / float(LIGHT_RAY_ITERATIONS);
 
 
 /**
@@ -149,16 +135,11 @@ float remap(float value, float oldMin, float oldMax, float newMin, float newMax)
 
 float3 sampleWeather(float3 pos)
 {
-#if 1
-	float2 uv = pos.xz * WEATHER_TEX_MOD.x;// + WEATHER_TEX_MOD.yz + (WEATHER_TEX_MOVE_SPEED * gClouds.mGlobalTime);
+	float2 uv = pos.xz * WEATHER_TEX_MOD.x;
 	uv = uv * 0.5 + 0.5;
+    uv += WEATHER_TEX_MOD.yz + (WEATHER_TEX_MOVE_SPEED * gClouds.mGlobalTime);
 	float3 data = weatherLookup.SampleLevel(texSampler, uv, 0.0f).rgb;
-	return float3(saturate(remap(data.b, 0.1, 1.0, 0, 0.8)), gClouds.mWeatherData.g, gClouds.mWeatherData.b);
-#else
-	float2 uv = pos.xz * WEATHER_TEX_MOD.x;// + WEATHER_TEX_MOD.yz + (WEATHER_TEX_MOVE_SPEED * gClouds.mGlobalTime);
-	uv = uv * 0.5 + 0.5;
-	return weatherLookup.SampleLevel(texSampler, uv, 0.0f).rgb;
-#endif
+	return float3(data.r, gClouds.mWeatherData.g, 1.0f - data.b);
 }
 
 float getCoverage(float3 weatherData)
@@ -189,7 +170,6 @@ float gradientStep(float a, float4 gradient)
 
 float4 mixGradients(float cloudType)
 {
-#if 1
 	if (cloudType < 0.5)
 	{
 		return lerp(STRATUS_GRADIENT, STRATOCUMULUS_GRADIENT, cloudType * 2.0);
@@ -198,34 +178,19 @@ float4 mixGradients(float cloudType)
 	{
 		return lerp(STRATOCUMULUS_GRADIENT, CUMULUS_GRADIENT, (cloudType - 0.5) * 2.0);
 	}
-#else
-	float stratus = 1.0f - saturate(cloudType * 2.0f);
-	float stratocumulus = 1.0f - abs(cloudType - 0.5f) * 2.0f;
-	float cumulus = saturate(cloudType - 0.5f) * 2.0f;
-	return STRATUS_GRADIENT * stratus + STRATOCUMULUS_GRADIENT * stratocumulus + CUMULUS_GRADIENT * cumulus;
-#endif
 }
 
 float densityHeightGradient(float heightFrac, float cloudType)
 {
 	float4 cloudGradient = mixGradients(cloudType);
-#if 0
-	return remap(heightFrac, cloudGradient.x, cloudGradient.y, 0, 1) * remap(heightFrac, cloudGradient.z, cloudGradient.w, 1, 0);
-#else
-	return smoothstep(cloudGradient.x, cloudGradient.y, heightFrac) - smoothstep(cloudGradient.z, cloudGradient.w, heightFrac);
-#endif
-}
-
-float smoothThreshold(float value, float threshold, float edgeSize)
-{
-	return smoothstep(threshold, threshold + edgeSize, value);
+    return gradientStep(heightFrac, cloudGradient);
 }
 
 // To simplify: wavelength independent scattering and extinction
 void getParticipatingMedia(out float muS, out float muE, in float cloudDensity, in float3 weatherData)
 {
-    const float kCloudsScattering = 0.001;
-	const float kCloudsAbsorption = 0.0001;
+    const float kCloudsScattering = 0.1;
+	const float kCloudsAbsorption = 0.001;
 
     muS = kCloudsScattering * cloudDensity;
     float muA = kCloudsAbsorption * cloudDensity * getPrecipitation(weatherData);
@@ -247,10 +212,10 @@ float sampleCloudDensity(
 	// bias to the wind direction
 	pos += (cb_windDirection + float3(0.0f, 0.1f, 0.0f)) * cb_cloudSpeed * gClouds.mGlobalTime;
 
-	pos *= CLOUD_SCALE;
+	float3 coord = pos * CLOUD_SCALE;
 
 	// Read the low-frequency Perlin-Worley and Worley noises.	
-	float4 lowFreqNoise = baseShapeLookup.SampleLevel(texSampler, pos, lerp(0.0f, gClouds.mBaseShapeTextureBottomMipLevel, lod));
+	float4 lowFreqNoise = baseShapeLookup.SampleLevel(texSampler, coord, lerp(0.0f, gClouds.mBaseShapeTextureBottomMipLevel, lod));
 
     // Build an FBM out of the low frequency Worley noises
     // that can be used to add detail to the low-frequency
@@ -268,22 +233,18 @@ float sampleCloudDensity(
 		0.0f, 1.0f);
 
     // Get the density-height gradient using the density height
-    // function explained in Section 4.3.2.
 	float densityGradient = densityHeightGradient(heightFrac, getCloudType(weatherData));
 
 	// Apply the height function to the base cloud shape.
 	baseCloud *= densityGradient;
 
-	//baseCloud *= 1 - pow(heightFrac, 22);
-
 	float cloudCoverage = getCoverage(weatherData);
 
+#if 0
 	float anvil_bias = 0;
 	cloudCoverage = pow(cloudCoverage, remap(1-heightFrac, 0.7, 0.8, 1.0, lerp(1.0, 0.5, anvil_bias)));
+#endif
 
-#if 0
-	float baseCloudWithCoverage = saturate(remap(baseCloud, saturate(heightFrac / cloudCoverage), 1.0, 0.0, 1.0)) * cloudCoverage;
-#else
 	// Use remap to apply the cloud coverage attribute.
 	float baseCloudWithCoverage = saturate(remap(
 		baseCloud,
@@ -294,20 +255,19 @@ float sampleCloudDensity(
     // that smaller clouds are lighter and more aesthetically
     // pleasing.
 	baseCloudWithCoverage *= cloudCoverage;
-#endif
 
 	float finalCloud = baseCloudWithCoverage;
 
-	if (gClouds.mEnableHighFreqNoise)
+	if (gClouds.mEnableHighFreqNoise > 0 && finalCloud > 0.0f)
 	{
-		float3 coord = pos * highFreqNoiseScale;
+		float3 newCoord = coord * highFreqNoiseScale;
 
-		if (gClouds.mEnableCurlNoise)
+		if (gClouds.mEnableCurlNoise > 0)
 		{
 			// Add some turbulence to bottoms of clouds.
-			float3 curlNoise = curlNoiseLookup.Sample(texSampler, pos.xy * cloudDistortionScale).rgb;
+			float3 curlNoise = curlNoiseLookup.Sample(texSampler, coord.xy * cloudDistortionScale).rgb;
 			curlNoise *= cloudDistortion * (1.0f - heightFrac);
-			coord += curlNoise;
+			newCoord += curlNoise;
 		}
 
 		// Sample high-frequency noises.
@@ -320,19 +280,14 @@ float sampleCloudDensity(
 			(highFreqNoise.b * 0.125f);
 
 	    // Transition from wispy shapes to billowy shapes over height.
-		float highFreqNoiseModifier = lerp(highFreqFBM, 1.0f - highFreqFBM, heightFrac);
+		float highFreqNoiseModifier = lerp(highFreqFBM, 1.0f - highFreqFBM, saturate(heightFrac * 1.0f));
 
 	    // Erode the base cloud shape with the distorted
 	    // high-frequency Worley noises.
 		finalCloud = remap(
 			baseCloudWithCoverage,
-			highFreqNoiseModifier * 0.2f, 1.0f,
+			highFreqNoiseModifier * 0.4f, 1.0f,
 			0.0f, 1.0f);
-	}
-
-	if (gClouds.mEnableHeightFade)
-	{
-		finalCloud *= smoothstep(0.0, cloudBottomFade, heightFrac);
 	}
 
 	return finalCloud;
@@ -361,6 +316,11 @@ float henyeyGreenstein(
 	return ((1.0f - g2) / pow((1.0f + g2 - 2.0f * g * lightDotEye), 1.5f)) * (0.25f * M_1_PIf);
 }
 
+float twoLobesHenyeyGreenstein(float lightDotEye)
+{
+    return lerp(henyeyGreenstein(lightDotEye, 0.8f), henyeyGreenstein(lightDotEye, -0.5f), 0.5f);
+}
+
 float lightEnergy(
 	float lightDotEye,
 	float densitySample,
@@ -371,90 +331,6 @@ float lightEnergy(
 		beerLambert(densitySample, precipitation) *
 		powder(originalDensity, lightDotEye) * 
 		lerp(henyeyGreenstein(lightDotEye, 0.8f), henyeyGreenstein(lightDotEye, -0.5f), 0.5f);
-}
-
-// TODO get from cb values - has to change as time of day changes
-float3 ambientLight(float heightFrac)
-{
-	return lerp(
-		float3(0.5f, 0.67f, 0.82f),
-		float3(1.0f, 1.0f, 1.0f),
-		heightFrac);
-}
-
-float3 sampleCloudDensityAlongCone(
-	float3 startPos,
-	float  stepSize,
-	float  lightDotEye,
-	float  originalDensity)
-{
-	float3 lightStep = stepSize * -gClouds.mSunLightDirection;
-
-	float3 pos = startPos;
-
-	float coneRadius = 1.0f;
-
-	float coneStep = RCP_LIGHT_RAY_ITERATIONS;
-
-	float densityAlongCone = 0.0f;
-
-	float lod = 0.0f;
-	float lodStride = RCP_LIGHT_RAY_ITERATIONS;
-
-	float3 weatherData = 0.0f;
-
-	float rcpThickness = 1.0f / (stepSize * LIGHT_RAY_ITERATIONS);
-
-	float density = 0.0f;
-
-	for (uint i = 0u; i < LIGHT_RAY_ITERATIONS; ++i)
-	{
-		float3 conePos = pos + coneRadius * RANDOM_VECTORS[i] * float(i + 1u);
-		float heightFrac = heightFraction(conePos);
-
-		if (heightFrac <= 1.0f)
-		{
-			weatherData = sampleWeather(conePos);
-			float cloudDensity = sampleCloudDensity(
-				conePos,
-				weatherData,
-				heightFrac,
-				lod);
-
-			if (cloudDensity > 0.0f)
-			{
-				density += cloudDensity;
-				float transmittance = 1.0f - (density * rcpThickness);
-				densityAlongCone += (cloudDensity * transmittance);
-			}
-		}
-
-		pos += lightStep;
-		coneRadius += coneStep;
-		lod += lodStride;
-	}
-	// take additional step at large distance away for shadowing from other clouds
-	pos = pos + (lightStep * 8.0f);
-	weatherData = sampleWeather(pos);
-	float heightFrac = heightFraction(pos);
-	if(heightFrac <= 1.0f)
-	{
-		float cloudDensity = sampleCloudDensity(
-			pos,
-			weatherData,
-			heightFrac,
-			0.8f);
-		// no need to branch here since density variable is no longer used after this
-		density += cloudDensity;
-		float transmittance = 1.0f - saturate(density * rcpThickness);
-		densityAlongCone += (cloudDensity * transmittance);
-	}
-
-	return saturate(lightEnergy(
-		lightDotEye,
-		densityAlongCone,
-		originalDensity,
-		lerp(1.0f, 2.0f, getPrecipitation(weatherData))));
 }
 
 float volumetricShadow(in float3 from, in float3 to)
@@ -507,10 +383,10 @@ float4 traceClouds(
     float3 scatteredLight = float3(0.0, 0.0, 0.0);
 
 	[loop]
-	for(uint i = 0u; i < sampleCount; ++i)
+	for(float s = 0.5; s < float(sampleCount); s += 1.0f)
 	{
 		// mid point of a segment for approximation
-		float3 pos = startPos + posStep * (float(i) + 0.5);
+		float3 pos = startPos + posStep * s;
 
 		float heightFrac = heightFraction(pos);
 		float3 weatherData = sampleWeather(pos);
@@ -523,22 +399,18 @@ float4 traceClouds(
 
 		if(cloudDensity > 0.0f)
 		{
-			float3 lightDensity = gClouds.mSunIrradiance / M_1_PIf / 4 * volumetricShadow(pos, pos + thickness * -gClouds.mSunLightDirection);
+			float3 lightDensity = gClouds.mSunIrradiance * twoLobesHenyeyGreenstein(lightDotEye) * volumetricShadow(pos, pos + (sampleCount - s) * posStep * -gClouds.mSunLightDirection);
 
-#if 0
-			float3 lightDensity = sampleCloudDensityAlongCone(
-				pos,
-				stepSize,
-				lightDotEye,
-				cloudDensity);
-#endif
+            lightDensity += gClouds.mSkyAmbient * 0.25f * M_1_PIf;
+
+            //lightDensity *= 2.1;
 
 			float muS = 0.0;
 			float muE = 0.0;
 			getParticipatingMedia(muS, muE, cloudDensity, weatherData);
 
 			// integrate along the current step segment
-            float3 inScattering = (lightDensity - lightDensity * exp(-muE * stepSize)) / muE * muS;
+            float3 inScattering = (lightDensity - lightDensity * exp(-muE * stepSize)) / (muS / muE);
 
 			 // accumulate and also take into account the transmittance from previous steps
             scatteredLight += transmittance * inScattering;

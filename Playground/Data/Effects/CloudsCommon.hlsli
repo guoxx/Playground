@@ -45,9 +45,10 @@ struct CloudsSettings
 
     float3 mWeatherData;
 
+    float3 mSkyAmbient;
+
     int mEnableHighFreqNoise;
     int mEnableCurlNoise;
-    int mEnableHeightFade;
 };
 
 cbuffer PerFrameCB : register(b0)

@@ -117,6 +117,7 @@ namespace Falcor
         mpVars["PerFrameCB"]["gClouds.mBaseShapeTextureBottomMipLevel"] = mControls.mBaseShapeTextureBottomMipLevel;
         mpVars["PerFrameCB"]["gClouds.mErosionTextureBottomMipLevel"] = mControls.mErosionTextureBottomMipLevel;
         mpVars["PerFrameCB"]["gClouds.mWeatherData"] = mControls.mWeatherData;
+        mpVars["PerFrameCB"]["gClouds.mSkyAmbient"] = pSunLight->GetSkyAmbient();
         mpVars["PerFrameCB"]["gClouds.mEnableHighFreqNoise"] = mControls.mEnableHighFreqNoise;
         mpVars["PerFrameCB"]["gClouds.mEnableCurlNoise"] = mControls.mEnableCurlNoise;
         mpVars["PerFrameCB"]["gClouds.mEnableHeightFade"] = mControls.mEnableHeightFade;

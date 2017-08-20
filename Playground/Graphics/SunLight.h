@@ -77,6 +77,8 @@ namespace Falcor
 
         Texture::SharedPtr GetSkyEnvMap() const;
 
+        glm::vec3 GetSkyAmbient() const;
+
     private:
         static SampledSpectrum computeSunRadiance(float sunTheta, float sunPhi, float turbidity, glm::vec3 groundAlbedo);
 
@@ -95,5 +97,6 @@ namespace Falcor
         void updateAsnyc(const InternalData data);
 
         Texture::SharedPtr mEnvMap;
+        glm::vec3 mSkyAmbient;
     };
 }

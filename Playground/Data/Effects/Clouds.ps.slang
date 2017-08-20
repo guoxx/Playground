@@ -346,7 +346,7 @@ float henyeyGreenstein(
 	float g)
 {
 	float g2 = g * g;
-	return ((1.0f - g2) / pow((1.0f + g2 - 2.0f * g * lightDotEye), 1.5f)) * 0.25f;
+	return ((1.0f - g2) / pow((1.0f + g2 - 2.0f * g * lightDotEye), 1.5f)) * 0.25f * M_1_PIf;
 }
 
 float lightEnergy(
@@ -361,13 +361,9 @@ float lightEnergy(
 		lerp(henyeyGreenstein(lightDotEye, 0.8f), henyeyGreenstein(lightDotEye, -0.5f), 0.5f);
 }
 
-// TODO get from cb values - has to change as time of day changes
 float3 ambientLight(float heightFrac)
 {
-	return lerp(
-		float3(0.5f, 0.67f, 0.82f),
-		float3(1.0f, 1.0f, 1.0f),
-		heightFrac);
+    return gClouds.mSkyAmbient;
 }
 
 float sampleCloudDensityAlongCone(
@@ -453,8 +449,9 @@ float4 traceClouds(
 	float3 pos = startPos;
 	float3 weatherData = 0.0f;
 	float4 result = 0.0f;
-	float density = 0.0f;
 	
+    float transmittance = 1.0f;
+
 	[loop]
 	for(uint i = 0u; i < sampleCount; ++i)
 	{
@@ -468,17 +465,18 @@ float4 traceClouds(
 
 		if(cloudDensity > 0.0f)
 		{
-			density += cloudDensity;
-			float transmittance = 1.0f - (density * rcpThickness);
+			float T = 1.0f - cloudDensity;
+            transmittance *= T;
+
 			float lightDensity = sampleCloudDensityAlongCone(
 				pos,
 				stepSize,
 				lightDotEye,
 				cloudDensity);
 
-			float3 ambientBadApprox = ambientLight(heightFrac) * min(1.0f, length(gClouds.mSunIrradiance.rgb * 0.0125f)) * transmittance;
-			float4 source = float4((gClouds.mSunIrradiance.rgb * lightDensity) + ambientBadApprox, cloudDensity * transmittance); // TODO enable ambient when added to constant buffer
-			source.rgb *= source.a;
+			float3 ambientBadApprox = ambientLight(heightFrac) * transmittance;
+			float4 source = float4((gClouds.mSunIrradiance.rgb * lightDensity) + ambientBadApprox, cloudDensity * transmittance);
+			source.rgb *= source.a * transmittance;
 			result = (1.0f - result.a) * source + result;
 			//if(result.a >= 1.0f) break;
 		}
@@ -487,7 +485,7 @@ float4 traceClouds(
 	}
 
 #if 1
-	return float4(result.xyz, 1 - saturate(result.a));
+	return float4(result.xyz, transmittance);
 #else
 	// experimental fog - may not be needed if clouds are drawn before atmosphere - would have to draw sun by itself, then clouds, then atmosphere
 	// fogAmt = 0 to disable

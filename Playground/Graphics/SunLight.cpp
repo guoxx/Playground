@@ -142,6 +142,11 @@ namespace Falcor
         return mEnvMap;
     }
 
+    glm::vec3 SunLight::GetSkyAmbient() const
+    {
+        return mSkyAmbient;
+    }
+
     SampledSpectrum SunLight::computeSunRadiance(float sunTheta, float sunPhi, float turbidity, glm::vec3 groundAlbedo)
     {
         const SphericalCoordinates sphericalCoord = SphericalCoordinates::FromThetaAndPhi(sunTheta, sunPhi);
@@ -243,8 +248,13 @@ namespace Falcor
             skyStates[i] = arhosek_rgb_skymodelstate_alloc_init(data.mTurbidity, data.mGroundAlbedo[i], sunCoord.GetElevation());
         }
 
+        int32_t numPixels = nTheta * nPhi / 2;
+
         auto computeSolarLuminance = [&](int32_t start, int32_t end)
         {
+            glm::highp_dvec3 acculumAmbient;
+            double sampleWeight = M_PI * 2 / numPixels;
+
             for (int32_t i = start; i < end; ++i)
             {
                 int32_t x = i % nPhi;        
@@ -277,23 +287,28 @@ namespace Falcor
 #else
                 storePixel(x, y, radiance[0], radiance[1], radiance[2]);
 #endif
+                acculumAmbient += glm::highp_dvec3(luminance.ToRGB()) * sampleWeight;
             }
+
+            return acculumAmbient;
         };
 
-        int32_t numPixels = nTheta * nPhi / 2;
         int32_t numPixelsPerTask = 128;
         int32_t numTasks = numPixels / numPixelsPerTask;
-        std::vector<std::future<void>> tasks;
+        std::vector<std::future<glm::highp_dvec3>> tasks;
         for (int32_t t = 0; t < numTasks; ++t)
         {
-            std::future<void> taskRet = std::async(std::launch::async, computeSolarLuminance, t * numPixelsPerTask, (t + 1) * numPixelsPerTask);
+            std::future<glm::highp_dvec3> taskRet = std::async(std::launch::async, computeSolarLuminance, t * numPixelsPerTask, (t + 1) * numPixelsPerTask);
             tasks.push_back(std::move(taskRet));
         }
 
+        glm::highp_dvec3 ambient;
         for (int32_t t = 0; t < numTasks; ++t)
         {
             tasks[t].wait();
+            ambient += tasks[t].get();
         }
+        mSkyAmbient = ambient;
 
         mEnvMap = Texture::create2D(nPhi, nTheta,
                                     ResourceFormat::RGBA32Float, 1, 1, pixelsData,

@@ -151,10 +151,10 @@ void FeatureDemo::onGuiRender()
         if(mpGui->beginGroup("Scene Settings"))
         {
             Scene* pScene = mpSceneRenderer->getScene();
-            float camSpeed = pScene->getCameraSpeed();
-            if (mpGui->addFloatVar("Camera Speed", camSpeed))
+
+            if (mpGui->addFloatVar("Camera Speed", mLog2CameraSpeed, 0, 10, 1))
             {
-                pScene->setCameraSpeed(camSpeed);
+                pScene->setCameraSpeed(std::exp2(mLog2CameraSpeed));
             }
 
             vec3 ambient = pScene->getAmbientIntensity();
@@ -186,6 +186,9 @@ void FeatureDemo::onGuiRender()
                 }
                 mpGui->endGroup();
             }
+
+            mpClouds->renderUI(mpGui.get(), "Clouds Settings");
+
             mpGui->endGroup();
         }
 

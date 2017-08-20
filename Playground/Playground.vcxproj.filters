@@ -20,6 +20,9 @@
     <ClCompile Include="Utils\Photometric.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
+    <ClCompile Include="Effects\Clouds\Clouds.cpp">
+      <Filter>Effects\Clouds</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ModelViewer.h" />
@@ -49,6 +52,9 @@
     <ClInclude Include="Utils\Photometric.h">
       <Filter>Utils</Filter>
     </ClInclude>
+    <ClInclude Include="Effects\Clouds\Clouds.h">
+      <Filter>Effects\Clouds</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Data">
@@ -62,6 +68,15 @@
     </Filter>
     <Filter Include="Graphics\HosekWilkie_SkylightModel">
       <UniqueIdentifier>{d2c87876-15bd-45ce-a172-af7c6aa97815}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Effects">
+      <UniqueIdentifier>{1c0f68d9-1ba4-44b8-b70e-029ff6a14e7f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Effects\Clouds">
+      <UniqueIdentifier>{815f6f0e-65b0-45e5-8401-d9d8cd936272}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data\Effects">
+      <UniqueIdentifier>{b078d2c8-0573-46bb-b037-99795f797b83}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -85,6 +100,15 @@
     </None>
     <None Include="Data\FeatureDemoCommon.hlsli">
       <Filter>Data</Filter>
+    </None>
+    <None Include="Data\Effects\Clouds.ps.slang">
+      <Filter>Data\Effects</Filter>
+    </None>
+    <None Include="Data\Effects\Clouds.vs.slang">
+      <Filter>Data\Effects</Filter>
+    </None>
+    <None Include="Data\Effects\CloudsCommon.hlsli">
+      <Filter>Data\Effects</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

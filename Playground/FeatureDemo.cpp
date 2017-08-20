@@ -157,9 +157,8 @@ void FeatureDemo::initScene(Scene::SharedPtr pScene)
     initShadowPass();
     initSSAO();
     initTAA();
+    initClouds();
     mCurrentTime = 0;
-    
-    pScene->setCameraSpeed(2.0f);
 }
 
 void FeatureDemo::loadModel(const std::string& filename, bool showProgressBar)
@@ -225,6 +224,11 @@ void FeatureDemo::initTAA()
     applyAaMode();
 }
 
+void FeatureDemo::initClouds()
+{
+    mpClouds = Clouds::create();
+}
+
 void FeatureDemo::initPostProcess()
 {
     mpToneMapper = ToneMapping::create(ToneMapping::Operator::Aces);
@@ -242,6 +246,10 @@ void FeatureDemo::onLoad()
     initializeTesting();
 
     loadModel("Sponza/Sponza.fbx", true);
+    //mpSceneRenderer->getScene()->getCamera(0)->setPosition(glm::vec3(0, 4005, 0));
+    //mpSceneRenderer->getScene()->getCamera(0)->move(glm::vec3(0, 4005, 0), glm::vec3(0, 0, 10), glm::vec3(1, 0, 0));
+    //mpSceneRenderer->getScene()->getCamera(0)->setDepthRange(0.1f, 25000);
+    //mpSceneRenderer->getScene()->setCameraSpeed(200.0f);
 }
 
 void FeatureDemo::renderSkyBox()
@@ -250,6 +258,12 @@ void FeatureDemo::renderSkyBox()
     mpState->setDepthStencilState(mSkyBox.pDS);
     mSkyBox.pEffect->render(mpRenderContext.get(), mpSceneRenderer->getScene()->getActiveCamera().get());
     mpState->setDepthStencilState(nullptr);
+}
+
+void FeatureDemo::renderClouds()
+{
+    PROFILE(clouds);
+    mpClouds->render(mpRenderContext.get(), mpSceneRenderer->getScene()->getActiveCamera().get(), mpSunLight.get(), mCurrentTime);
 }
 
 void FeatureDemo::beginFrame()
@@ -471,6 +485,7 @@ void FeatureDemo::onFrameRender()
         shadowPass();
 		mpState->setFbo(mpMainFbo);
         renderSkyBox();
+        renderClouds();
         lightingPass();
         antiAliasing();
         postProcess();
@@ -583,7 +598,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
     SampleConfig config;
     config.windowDesc.title = "Playground";
     config.windowDesc.resizableWindow = false;
-    config.windowDesc.width = 1280;
-    config.windowDesc.height = 720;
+    config.windowDesc.width = 1600;
+    config.windowDesc.height = 900;
     sample.run(config);
 }

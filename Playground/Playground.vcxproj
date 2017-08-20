@@ -79,6 +79,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Effects\Clouds\Clouds.cpp" />
     <ClCompile Include="FeatureDemo.cpp" />
     <ClCompile Include="FeatureDemoControls.cpp" />
     <ClCompile Include="FeatureDemoSceneRenderer.cpp" />
@@ -90,6 +91,7 @@
     <ClCompile Include="Utils\SphericalCoordinates.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Effects\Clouds\Clouds.h" />
     <ClInclude Include="FeatureDemo.h" />
     <ClInclude Include="FeatureDemoSceneRenderer.h" />
     <ClInclude Include="Graphics\HosekWilkie_SkylightModel\ArHosekSkyModel.h" />
@@ -106,6 +108,9 @@
     <None Include="Data\ApplyAO.ps.slang" />
     <None Include="Data\DepthPass.ps.slang" />
     <None Include="Data\DepthPass.vs.slang" />
+    <None Include="Data\Effects\Clouds.ps.slang" />
+    <None Include="Data\Effects\Clouds.vs.slang" />
+    <None Include="Data\Effects\CloudsCommon.hlsli" />
     <None Include="Data\FeatureDemo.ps.slang" />
     <None Include="Data\FeatureDemo.vs.slang" />
     <None Include="Data\FeatureDemoCommon.hlsli" />

@@ -86,6 +86,13 @@ namespace Falcor
         dsDesc.setDepthWriteMask(false).setDepthFunc(DepthStencilState::Func::LessEqual).setDepthTest(true);
         mpDsState = DepthStencilState::create(dsDesc);
 
+        BlendState::Desc bsDesc;
+        for (uint32_t i = 1; i < Fbo::getMaxColorTargetCount(); ++i)
+        {
+            bsDesc.setRenderTargetWriteMask(i, false, false, false, false);
+        }
+        mpBlendState = BlendState::create(bsDesc);
+
         return true;
     }
 
@@ -121,7 +128,7 @@ namespace Falcor
         pCB->setVariable(mMatOffset, mInvProj);
 
         pRenderCtx->pushGraphicsVars(mpVars);
-        mpEffect->execute(pRenderCtx, mpDsState);
+        mpEffect->execute(pRenderCtx, mpDsState, mpBlendState);
         pRenderCtx->popGraphicsVars();
     }
 }

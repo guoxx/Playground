@@ -90,6 +90,7 @@ namespace Falcor
         GraphicsProgram::SharedPtr mpProgram;
         GraphicsVars::SharedPtr mpVars;
         DepthStencilState::SharedPtr mpDsState;
+        BlendState::SharedPtr mpBlendState;
 
         struct
         {
